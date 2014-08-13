@@ -289,12 +289,12 @@ contains
 
     if (lat % type == LATTICE_RECT) then
       xyz_t(1) = xyz(1) - (lat % lower_left(1) + &
-          (i_xyz(1) - 0.5_8)*lat % width(1))
+          &(i_xyz(1) - 0.5_8)*lat % width(1))
       xyz_t(2) = xyz(2) - (lat % lower_left(2) + &
-          (i_xyz(2) - 0.5_8)*lat % width(2))
+          &(i_xyz(2) - 0.5_8)*lat % width(2))
       if (lat % n_dimension == 3) then
         xyz_t(3) = xyz(3) - (lat % lower_left(3) + &
-            (i_xyz(3) - 0.5_8)*lat % width(3))
+            &(i_xyz(3) - 0.5_8)*lat % width(3))
       else
         xyz_t(3) = xyz(3)
       end if
@@ -303,13 +303,13 @@ contains
       n_rings = lat % dimension(1)
  
       xyz_t(1) = xyz(1) - (lat % lower_left(1) + &
-          sqrt(3.0_8) * (i_xyz(1) - n_rings) * lat % width(1))
+          &sqrt(3.0_8) * (i_xyz(1) - n_rings) * lat % width(1))
       xyz_t(2) = xyz(2) - (lat % lower_left(2) + &
-          2 * (i_xyz(2) - n_rings) * lat % width(1) + &
-          (i_xyz(1) - n_rings) * lat % width(1))
+          &(2 * (i_xyz(2) - n_rings)) * lat % width(1) + &
+          &(i_xyz(1) - n_rings) * lat % width(1))
       if (lat % n_dimension == 3) then
         xyz_t(3) = xyz(3) - (lat % lower_left(3) + &
-            (i_xyz(3) - 0.5_8)*lat % width(3))
+            &(i_xyz(3) - 0.5_8) * lat % width(3))
       else
         xyz_t(3) = xyz(3)
       end if
@@ -1609,7 +1609,8 @@ contains
 
         if (d_lat < 0.0) then
           message = "Particle " // trim(to_str(p % id)) // &
-              & " had a negative distance to a lattice boundary."
+              &" had a negative distance to a lattice boundary. d = " // &
+              &trim(to_str(d_lat))
           call handle_lost_particle(p)
         end if
       end if LAT_COORD
