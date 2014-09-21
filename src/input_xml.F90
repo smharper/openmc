@@ -1386,6 +1386,20 @@ contains
         end if
       end if
 
+      ! Read random translation limits if present.
+      if (check_for_node(node_lat, "random_translate")) then
+        n = get_arraysize_double(node_lat, "random_translate")
+        if (n /= lat % n_dimension) then
+          message = "The number of values in <random_translate> of lattice " &
+              &// trim(to_str(lat % id)) // " must equal the number of " &
+              &// "dimensions."
+          call fatal_error()
+        else
+          allocate(lat % rand_limits(n))
+          call get_node_array(node_lat, "random_translate", lat % rand_limits)
+        end if
+      end if
+
       ! Add lattice to dictionary
       call lattice_dict % add_key(lat % id, i)
 

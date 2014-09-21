@@ -31,6 +31,7 @@ module geometry_header
      real(8), allocatable :: width(:)         ! width of each lattice cell
      integer, allocatable :: universes(:,:,:) ! specified universes
      integer              :: outside          ! material to fill area outside
+     real(8), allocatable :: rand_limits(:)   ! random translation limits
   end type Lattice
 
 !===============================================================================
