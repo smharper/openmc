@@ -315,6 +315,18 @@ contains
             end if
             p % coord % next % uvw = p % coord % uvw
 
+            ! Add random translation if necessary.
+            if (allocated(lat % rand_trans)) then
+              p % coord % next % xyz(1) = p % coord % next % xyz(1) &
+                  &+ lat % rand_trans(i_x, i_y, i_z, 1)
+              p % coord % next % xyz(2) = p % coord % next % xyz(2) &
+                  &+ lat % rand_trans(i_x, i_y, i_z, 2)
+              if (lat % n_dimension == 3) then
+                p % coord % next % xyz(3) = p % coord % next % xyz(3) &
+                    &+ lat % rand_trans(i_x, i_y, i_z, 3)
+              end if
+            end if
+
             ! set particle lattice indices
             p % coord % next% lattice   = c % fill
             p % coord % next% lattice_x = i_x
@@ -720,10 +732,22 @@ contains
       ! TODO: Add hex lattice support
     end if
 
-    ! Check to make sure still in lattice
     i_x = p % coord % lattice_x
     i_y = p % coord % lattice_y
     i_z = p % coord % lattice_z
+
+    if (allocated(lat % rand_trans)) then
+      p % coord % xyz(1) = p % coord % xyz(1) &
+          &+ lat % rand_trans(i_x, i_y, i_z, 1)
+      p % coord % xyz(2) = p % coord % xyz(2) &
+          &+ lat % rand_trans(i_x, i_y, i_z, 2)
+      if (lat % n_dimension == 3) then
+        p % coord % xyz(3) = p % coord % xyz(3) &
+            &+ lat % rand_trans(i_x, i_y, i_z, 3)
+      end if
+    end if
+
+    ! Check to make sure still in lattice
     n_x = lat % dimension(1)
     n_y = lat % dimension(2)
     if (lat % n_dimension == 3) then
@@ -1260,6 +1284,18 @@ contains
           x = coord % xyz(1)
           y = coord % xyz(2)
           z = coord % xyz(3)
+
+          ! Remove the random translation from the local coordiantes if present.
+          if (allocated(lat % rand_trans)) then
+            x = x - lat % rand_trans(coord % lattice_x, coord % lattice_y, &
+                                       &coord % lattice_z, 1)
+            y = y - lat % rand_trans(coord % lattice_x, coord % lattice_y, &
+                                       &coord % lattice_z, 2)
+            if (lat % n_dimension == 3) then
+              z = z - lat % rand_trans(coord % lattice_x, coord % lattice_y, &
+                                         &coord % lattice_z, 3)
+            end if
+          end if
 
           ! determine oncoming edge
           x0 = sign(lat % width(1) * 0.5_8, u)

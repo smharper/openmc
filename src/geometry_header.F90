@@ -26,12 +26,14 @@ module geometry_header
      integer :: type        ! Type of lattice (rectangular, hex, etc)
      integer :: level       ! Level of lattice
      integer :: n_dimension ! Number of dimensions
-     integer, allocatable :: dimension(:)     ! number of cells in each direction
-     real(8), allocatable :: lower_left(:)    ! lower-left corner of lattice
-     real(8), allocatable :: width(:)         ! width of each lattice cell
-     integer, allocatable :: universes(:,:,:) ! specified universes
-     integer              :: outside          ! material to fill area outside
-     real(8), allocatable :: rand_limits(:)   ! random translation limits
+     integer, allocatable :: dimension(:)        ! number of cells in each
+                                                 ! direction
+     real(8), allocatable :: lower_left(:)       ! lower-left corner of lattice
+     real(8), allocatable :: width(:)            ! width of each lattice cell
+     integer, allocatable :: universes(:,:,:)    ! specified universes
+     integer              :: outside             ! material to fill area outside
+     real(8), allocatable :: rand_limits(:)      ! random translation limits
+     real(8), allocatable :: rand_trans(:,:,:,:) ! random translation values
   end type Lattice
 
 !===============================================================================

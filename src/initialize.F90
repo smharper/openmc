@@ -16,7 +16,7 @@ module initialize
                               print_usage, write_xs_summary, print_plot,       &
                               write_message
   use output_interface
-  use random_lcg,       only: initialize_prng
+  use random_lcg,       only: initialize_prng, prn
   use source,           only: initialize_source
   use state_point,      only: load_state_point
   use string,           only: to_str, str_to_int, starts_with, ends_with
@@ -94,6 +94,9 @@ contains
     ! After reading input and basic geometry setup is complete, build lists of
     ! neighboring cells for efficient tracking
     call neighbor_lists()
+
+    ! Set lattice random translation values if needed.
+    call initialize_random_translation()
 
     if (run_mode /= MODE_PLOTTING) then
       ! With the AWRs from the xs_listings, change all material specifications
@@ -745,6 +748,52 @@ contains
     end do TALLY_LOOP
 
   end subroutine adjust_indices
+
+  subroutine initialize_random_translation()
+
+    integer                :: i, i_x, i_y, i_z
+    type(Lattice), pointer :: lat
+
+    ! Loop over all lattices.
+    do i = 1, n_lattices
+      lat => lattices(i)
+
+      ! Ignore the lattice if does not have a random translation specified.
+      if (.not. allocated(lat % rand_limits)) cycle
+
+      if (lat % n_dimension == 2) then
+        allocate(lat % rand_trans(lat % dimension(1), lat % dimension(2), 1, 2))
+
+        do i_y = 1, lat % dimension(2)
+          do i_x = 1, lat % dimension(1)
+            lat % rand_trans(i_x, i_y, 1, 1) = (2.0_8*prn() - 1.0_8)&
+                &*lat % rand_limits(1)
+            lat % rand_trans(i_x, i_y, 1, 2) = (2.0_8*prn() - 1.0_8)&
+                &*lat % rand_limits(2)
+          end do
+        end do
+
+      else
+        allocate(lat % rand_trans(lat % dimension(1), lat % dimension(2),&
+                                  &lat % dimension(3), 3))
+
+        do i_z = 1, lat % dimension(3)
+          do i_y = 1, lat % dimension(2)
+            do i_x = 1, lat % dimension(1)
+            lat % rand_trans(i_x, i_y, i_z, 1) = (2.0_8*prn() - 1.0_8)&
+                &*lat % rand_limits(1)
+            lat % rand_trans(i_x, i_y, i_z, 2) = (2.0_8*prn() - 1.0_8)&
+                &*lat % rand_limits(2)
+            lat % rand_trans(i_x, i_y, i_z, 3) = (2.0_8*prn() - 1.0_8)&
+                &*lat % rand_limits(3)
+            end do
+          end do
+        end do
+
+      end if
+    end do
+
+  end subroutine initialize_random_translation
 
 !===============================================================================
 ! NORMALIZE_AO normalizes the atom or weight percentages for each material
