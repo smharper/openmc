@@ -313,7 +313,8 @@ contains
       end if
 
       ! Add random translation if necessary.
-      if (allocated(lat % rand_trans) .and. allow_rand_) then
+      if (allocated(lat % rand_trans) .and. allow_rand_ &
+          & .and. is_valid_lat_index(lat, i_xyz)) then
         xyz_t(1:2) = xyz_t(1:2) &
             &+ lat % rand_trans(i_xyz(1), i_xyz(2), i_xyz(3), 1:2)
         if (lat % is_3d) then
