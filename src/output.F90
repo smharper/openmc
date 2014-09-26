@@ -6,7 +6,8 @@ module output
   use constants
   use endf,            only: reaction_name
   use error,           only: warning
-  use geometry_header, only: Cell, Universe, Surface, BASE_UNIVERSE
+  use geometry_header, only: Cell, Universe, Surface, Lattice, RectLattice, &
+                             &HexLattice, BASE_UNIVERSE
   use global
   use math,            only: t_percentile
   use mesh_header,     only: StructuredMesh
@@ -255,7 +256,7 @@ contains
     type(Cell),       pointer :: c => null()
     type(Surface),    pointer :: s => null()
     type(Universe),   pointer :: u => null()
-    type(Lattice),    pointer :: l => null()
+    class(Lattice),   pointer :: l => null()
     type(LocalCoord), pointer :: coord => null()
 
     ! display type of particle
@@ -291,7 +292,7 @@ contains
 
       ! Print information on lattice
       if (coord % lattice /= NONE) then
-        l => lattices(coord % lattice)
+        l => lattices(coord % lattice) % obj
         write(ou,*) '    Lattice          = ' // trim(to_str(l % id))
         write(ou,*) '    Lattice position = (' // trim(to_str(&
              p % coord % lattice_x)) // ',' // trim(to_str(&
@@ -354,7 +355,7 @@ contains
     integer :: unit_      ! unit to write to
     character(MAX_LINE_LEN) :: string
     type(Universe), pointer :: u => null()
-    type(Lattice),  pointer :: l => null()
+    class(Lattice), pointer :: l => null()
     type(Material), pointer :: m => null()
 
     ! Set unit to stdout if not already set
@@ -383,7 +384,7 @@ contains
       u => universes(c % fill)
       write(unit_,*) '    Fill = Universe ' // to_str(u % id)
     case (CELL_LATTICE)
-      l => lattices(c % fill)
+      l => lattices(c % fill) % obj
       write(unit_,*) '    Fill = Lattice ' // to_str(l % id)
     end select
 
@@ -470,10 +471,9 @@ contains
 
   subroutine print_lattice(lat, unit)
 
-    type(Lattice), pointer :: lat
-    integer,      optional :: unit
+    class(Lattice), pointer :: lat
+    integer,       optional :: unit
 
-    integer :: i     ! loop index
     integer :: unit_ ! unit to write to
     character(MAX_LINE_LEN) :: string
 
@@ -488,27 +488,41 @@ contains
     ! Write information about lattice
     write(unit_,*) 'Lattice ' // to_str(lat % id)
 
-    ! Write dimension of lattice
-    string = ""
-    do i = 1, lat % n_dimension
-      string = trim(string) // ' ' // to_str(lat % dimension(i))
-    end do
-    write(unit_,*) '    Dimension =' // string
+    select type(lat)
+    type is (RectLattice)
+      ! Write dimension of lattice.
+      string = to_str(lat % n_cells(1)) // ' ' // to_str(lat % n_cells(2))
+      if (lat % is_3d) string = string // ' ' // to_str(lat % n_cells(3))
+      write(unit_,*) '    Dimension =' // string
 
-    ! Write lower-left coordinates of lattice
-    string = ""
-    do i = 1, lat % n_dimension
-      string = trim(string) // ' ' // to_str(lat % lower_left(i))
-    end do
-    write(unit_,*) '    Lower-left =' // string
+      ! Write lower-left coordinates of lattice.
+      string = to_str(lat % lower_left(1)) // ' ' // to_str(lat % lower_left(2))
+      if (lat % is_3d) string = string // ' ' // to_str(lat % lower_left(3))
+      write(unit_,*) '    Lower-left =' // string
 
-    ! Write width of each lattice cell
-    string = ""
-    do i = 1, lat % n_dimension
-      string = trim(string) // ' ' // to_str(lat % width(i))
-    end do
-    write(unit_,*) '    Width =' // string
-    write(unit_,*)
+      ! Write lattice pitch along each axis.
+      string = to_str(lat % pitch(1)) // ' ' // to_str(lat % pitch(2))
+      if (lat % is_3d) string = string // ' ' // to_str(lat % pitch(3))
+      write(unit_,*) '    Pitch =' // string
+      write(unit_,*)
+
+    type is (HexLattice)
+      ! Write dimension of lattice.
+      write(unit_,*) '    N-rings = ' // to_str(lat % n_rings)
+      if (lat % is_3d) write(unit_,*) '    N-axial = ' // to_str(lat % n_axial)
+
+      ! Write center coordinates of lattice.
+      string = to_str(lat % center(1)) // ' ' // to_str(lat % center(2))
+      if (lat % is_3d) string = string // ' ' // to_str(lat % center(3))
+      write(unit_,*) '    Center =' // string
+
+      ! Write lattice pitch along each axis.
+      string = to_str(lat % pitch(1))
+      if (lat % is_3d) string = string // ' ' // to_str(lat % pitch(2))
+      write(unit_,*) '    Pitch =' // string
+      write(unit_,*)
+    end select
+
 
   end subroutine print_lattice
 
@@ -918,7 +932,7 @@ contains
     type(Surface),     pointer :: s => null()
     type(Cell),        pointer :: c => null()
     type(Universe),    pointer :: u => null()
-    type(Lattice),     pointer :: l => null()
+    class(Lattice),    pointer :: l => null()
 
     ! print summary of surfaces
     call header("SURFACE SUMMARY", unit=UNIT_SUMMARY)
@@ -945,7 +959,7 @@ contains
     if (n_lattices > 0) then
       call header("LATTICE SUMMARY", unit=UNIT_SUMMARY)
       do i = 1, n_lattices
-        l => lattices(i)
+        l => lattices(i) % obj
         call print_lattice(l, unit=UNIT_SUMMARY)
       end do
     end if

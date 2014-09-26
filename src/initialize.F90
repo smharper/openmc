@@ -7,7 +7,8 @@ module initialize
   use energy_grid,      only: unionized_grid
   use error,            only: fatal_error, warning
   use geometry,         only: neighbor_lists
-  use geometry_header,  only: Cell, Universe, Lattice, BASE_UNIVERSE
+  use geometry_header,  only: Cell, Universe, Lattice, RectLattice, HexLattice,&
+                              &BASE_UNIVERSE
   use global
   use input_xml,        only: read_input_xml, read_cross_sections_xml,         &
                               cells_in_univ_dict, read_plots_xml
@@ -556,16 +557,15 @@ contains
 
   subroutine adjust_indices()
 
-    integer :: i             ! index for various purposes
-    integer :: j             ! index for various purposes
-    integer :: k             ! loop index for lattices
-    integer :: m             ! loop index for lattices
-    integer :: mid, lid      ! material and lattice IDs
-    integer :: n_x, n_y, n_z ! size of lattice
-    integer :: i_array       ! index in surfaces/materials array
-    integer :: id            ! user-specified id
+    integer :: i                      ! index for various purposes
+    integer :: j                      ! index for various purposes
+    integer :: k                      ! loop index for lattices
+    integer :: m                      ! loop index for lattices
+    integer :: mid, lid               ! material and lattice IDs
+    integer :: i_array                ! index in surfaces/materials array 
+    integer :: id                     ! user-specified id
     type(Cell),        pointer :: c => null()
-    type(Lattice),     pointer :: lat => null()
+    class(Lattice),    pointer :: lat => null()
     type(TallyObject), pointer :: t => null()
 
     do i = 1, n_cells
@@ -621,7 +621,7 @@ contains
           c % fill = universe_dict % get_key(id)
         elseif (lattice_dict % has_key(id)) then
           lid = lattice_dict % get_key(id)
-          mid = lattices(lid) % outside
+          mid = lattices(lid) % obj % outside
           c % type = CELL_LATTICE
           c % fill = lid
           if (mid == MATERIAL_VOID) then
@@ -646,29 +646,47 @@ contains
     ! ADJUST UNIVERSE INDICES FOR EACH LATTICE
 
     do i = 1, n_lattices
-      lat => lattices(i)
-      n_x = lat % dimension(1)
-      n_y = lat % dimension(2)
-      if (lat % n_dimension == 3) then
-        n_z = lat % dimension(3)
-      else
-        n_z = 1
-      end if
+      lat => lattices(i) % obj
+      select type (lat)
 
-      do m = 1, n_z
-        do k = 1, n_y
-          do j = 1, n_x
-            id = lat % universes(j,k,m)
-            if (universe_dict % has_key(id)) then
-              lat % universes(j,k,m) = universe_dict % get_key(id)
-            else
-              message = "Invalid universe number " // trim(to_str(id)) &
-                   // " specified on lattice " // trim(to_str(lat % id))
-              call fatal_error()
-            end if
+      type is (RectLattice)
+        do m = 1, lat % n_cells(3)
+          do k = 1, lat % n_cells(2)
+            do j = 1, lat % n_cells(1)
+              id = lat % universes(j,k,m)
+              if (universe_dict % has_key(id)) then
+                lat % universes(j,k,m) = universe_dict % get_key(id)
+              else
+                message = "Invalid universe number " // trim(to_str(id)) &
+                     // " specified on lattice " // trim(to_str(lat % id))
+                call fatal_error()
+              end if
+            end do
           end do
         end do
-      end do
+
+      type is (HexLattice)
+        do m = 1, lat % n_axial
+          do k = 1, 2*lat % n_rings - 1
+            do j = 1, 2*lat % n_rings - 1
+              if (j + k < lat % n_rings + 1) then
+                cycle
+              else if (j + k > 3*lat % n_rings - 1) then
+                cycle
+              end if
+              id = lat % universes(j, k, m)
+              if (universe_dict % has_key(id)) then
+                lat % universes(j, k, m) = universe_dict % get_key(id)
+              else
+                message = "Invalid universe number " // trim(to_str(id)) &
+                     // " specified on lattice " // trim(to_str(lat % id))
+                call fatal_error()
+              end if
+            end do
+          end do
+        end do
+
+      end select
 
     end do
 
@@ -751,21 +769,25 @@ contains
 
   subroutine initialize_random_translation()
 
-    integer                :: i, i_x, i_y, i_z
-    type(Lattice), pointer :: lat
+    integer                 :: i, i_x, i_y, i_z
+    class(Lattice), pointer :: lat
 
     ! Loop over all lattices.
     do i = 1, n_lattices
-      lat => lattices(i)
+      lat => lattices(i) % obj
+
+      ! Ignore the lattice if it is hexagonal.
+      select type(lat)
+      type is (RectLattice)
 
       ! Ignore the lattice if does not have a random translation specified.
       if (.not. allocated(lat % rand_limits)) cycle
 
-      if (lat % n_dimension == 2) then
-        allocate(lat % rand_trans(lat % dimension(1), lat % dimension(2), 1, 2))
+      if (.not. lat % is_3d) then
+        allocate(lat % rand_trans(lat % n_cells(1), lat % n_cells(2), 1, 2))
 
-        do i_y = 1, lat % dimension(2)
-          do i_x = 1, lat % dimension(1)
+        do i_y = 1, lat % n_cells(2)
+          do i_x = 1, lat % n_cells(1)
             lat % rand_trans(i_x, i_y, 1, 1) = (2.0_8*prn() - 1.0_8)&
                 &*lat % rand_limits(1)
             lat % rand_trans(i_x, i_y, 1, 2) = (2.0_8*prn() - 1.0_8)&
@@ -774,12 +796,12 @@ contains
         end do
 
       else
-        allocate(lat % rand_trans(lat % dimension(1), lat % dimension(2),&
-                                  &lat % dimension(3), 3))
+        allocate(lat % rand_trans(lat % n_cells(1), lat % n_cells(2),&
+                                  &lat % n_cells(3), 3))
 
-        do i_z = 1, lat % dimension(3)
-          do i_y = 1, lat % dimension(2)
-            do i_x = 1, lat % dimension(1)
+        do i_z = 1, lat % n_cells(3)
+          do i_y = 1, lat % n_cells(2)
+            do i_x = 1, lat % n_cells(1)
             lat % rand_trans(i_x, i_y, i_z, 1) = (2.0_8*prn() - 1.0_8)&
                 &*lat % rand_limits(1)
             lat % rand_trans(i_x, i_y, i_z, 2) = (2.0_8*prn() - 1.0_8)&
@@ -791,6 +813,7 @@ contains
         end do
 
       end if
+      end select
     end do
 
   end subroutine initialize_random_translation
