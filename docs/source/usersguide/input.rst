@@ -811,6 +811,20 @@ the following attributes or sub-elements:
 
     *Default*: None
 
+  :random_translate:
+    Two or three real numbers that specify the x and y (and z) limits of
+    uniform random translations applied to each lattice cell.  This element
+    allows easier modeling of stochastic geometries.  This element is optional
+
+    .. note::  This feature has only been tested for reactor geometries with
+               large numbers of spherical particles dispersed sparsely in a
+               medium (e.g. TRISO fuel particles in a graphite compact).  Make
+               sure to perform tests of this feature before applying it to
+               different problems (like those with densely packed or
+               non-spherical particles).
+
+    *Default*: None
+
   :outside:
     The unique integer identifier of a material that is to be used to fill all
     space outside of the lattice. This element is optional.

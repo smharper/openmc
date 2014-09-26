@@ -1599,6 +1599,13 @@ contains
         end if
       end if
 
+      ! Raise an error for random translations specified in a hex lattice.
+      if (check_for_node(node_lat, "random_translate")) then
+        message = "The <random_translate> subelement is not implemented for " &
+            & // "hexagonal lattices."
+        call warning()
+      end if
+
       ! Add lattice to dictionary
       call lattice_dict % add_key(lat % id, n_rlats + i)
 

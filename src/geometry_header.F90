@@ -30,10 +30,10 @@ module geometry_header
   end type Lattice
 
   type, extends(Lattice) :: RectLattice
-    integer               :: n_cells(3)     ! Number of cells along each axis
-    real(8), allocatable  :: lower_left(:)  ! Global lower-left corner of lat
-    real(8), allocatable :: rand_limits(:)      ! random translation limits
-    real(8), allocatable :: rand_trans(:,:,:,:) ! random translation values
+    integer               :: n_cells(3)          ! # of cells along each axis
+    real(8), allocatable  :: lower_left(:)       ! Global lower-left lat corner
+    real(8), allocatable  :: rand_limits(:)      ! Random translation limits
+    real(8), allocatable  :: rand_trans(:,:,:,:) ! Random translation values
   end type RectLattice
 
   type, extends(Lattice) :: HexLattice

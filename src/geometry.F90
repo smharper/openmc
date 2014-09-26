@@ -292,6 +292,7 @@ contains
 
     logical  :: allow_rand_
 
+    ! Set allow_rand_ to given value or the default value of .true.
     if (present(allow_rand)) then
       allow_rand_ = allow_rand
     else
@@ -1338,7 +1339,7 @@ contains
         LAT_TYPE: select type(lat)
 
         type is (RectLattice)
-          ! Copy local coordinates.
+          ! Get the local coordinates without any random translations.
           xyz_t = get_lat_trans(lat, parent_coord % xyz, i_xyz, .false.)
           x = xyz_t(1)
           y = xyz_t(2)
