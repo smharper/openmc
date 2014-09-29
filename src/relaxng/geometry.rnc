@@ -28,7 +28,8 @@ element geometry {
     (element lower_left { list { xsd:double+ } } | attribute lower_left { list { xsd:double+ } }) &
     (element pitch { list { xsd:double+ } } | attribute pitch { list { xsd:double+ } }) &
     (element universes { list { xsd:int+ } } | attribute universes { list { xsd:int+ } }) &
-    (element outside { xsd:int } | attribute outside { xsd:int })?
+    (element outside { xsd:int } | attribute outside { xsd:int })? &
+    (element random_translate { list { xsd:double+ } } | attribute random_translate { list { xsd:double+ } })?
   }*
 
   & element hex_lattice {
