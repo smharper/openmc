@@ -1,6 +1,7 @@
 module error
 
   use, intrinsic :: ISO_FORTRAN_ENV
+  use constants
 
   use global
 
@@ -17,40 +18,36 @@ contains
 ! stream.
 !===============================================================================
 
-  subroutine warning(force, deprecation)
+  subroutine warning(message_in, deprecation)
 
-    logical, optional, intent(in) :: force ! force write from non-master proc
+    character(*)                  :: message_in  ! printed with the warning
     logical, optional, intent(in) :: deprecation ! is a depreciation warning
 
-    logical :: deprecation_ ! is a deprecation warning
-    integer :: i_start      ! starting position
-    integer :: i_end        ! ending position
-    integer :: line_wrap    ! length of line
-    integer :: length       ! length of message
-    integer :: indent       ! length of indentation
-
-    ! Only allow master to print to screen
-    if (.not. master .and. .not. present(force)) return
-
-    ! Make a deprecation alias in case deprecation is not present.
-    if (.not. present(deprecation)) then
-      deprecation_ = .false.
-    else
-      deprecation_ = deprecation
-    end if
-
-    ! Write warning at beginning
-    if (deprecation_) then
-      message = 'DEPRECATION WARNING: ' // message
-    else
-      message = 'WARNING: ' // message
-    end if
+    integer                   :: i_start      ! starting position
+    integer                   :: i_end        ! ending position
+    integer                   :: line_wrap    ! length of line
+    integer                   :: length       ! length of message
+    integer                   :: indent       ! length of indentation
+    character(:), allocatable :: message      ! input message with a prefix
 
     ! Set line wrapping and indentation
     line_wrap = 80
     indent = 10
 
     ! Determine length of message
+    length = len_trim(message_in)
+
+    ! Prefix the message
+    if (.not. present(deprecation)) then
+      allocate(character(length+9) :: message)
+      message = 'WARNING: ' // message_in
+    else if (deprecation) then
+      allocate(character(length+23) :: message)
+      message = 'DEPRECATION WARNING: ' // message_in
+    else
+      allocate(character(length+9) :: message)
+      message = 'WARNING: ' // message_in
+    end if
     length = len_trim(message)
 
     i_start = 0
@@ -83,6 +80,8 @@ contains
       end if
     end do
 
+    deallocate(message)
+
   end subroutine warning
 
 !===============================================================================
@@ -91,8 +90,9 @@ contains
 ! the program is aborted.
 !===============================================================================
 
-  subroutine fatal_error(error_code)
+  subroutine fatal_error(message, error_code)
 
+    character(*) :: message
     integer, optional :: error_code ! error code
 
     integer :: code      ! error code

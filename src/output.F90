@@ -194,8 +194,9 @@ contains
 ! standard output stream.
 !===============================================================================
 
-  subroutine write_message(level)
+  subroutine write_message(message, level)
 
+    character(*) :: message
     integer, optional :: level ! verbosity level
 
     integer :: i_start    ! starting position
@@ -475,8 +476,6 @@ contains
     integer,       optional :: unit
 
     integer :: unit_ ! unit to write to
-    character(MAX_LINE_LEN) :: string
-
 
     ! set default unit if not specified
     if (present(unit)) then
@@ -491,19 +490,34 @@ contains
     select type(lat)
     type is (RectLattice)
       ! Write dimension of lattice.
-      string = to_str(lat % n_cells(1)) // ' ' // to_str(lat % n_cells(2))
-      if (lat % is_3d) string = string // ' ' // to_str(lat % n_cells(3))
-      write(unit_,*) '    Dimension =' // string
+      if (lat % is_3d) then
+        write(unit_, *) '    Dimension = ' // to_str(lat % n_cells(1)) &
+             &// ' ' // to_str(lat % n_cells(2)) // ' ' &
+             &// to_str(lat % n_cells(3))
+      else
+        write(unit_, *) '    Dimension = ' // to_str(lat % n_cells(1)) &
+             &// ' ' // to_str(lat % n_cells(2))
+      end if
 
       ! Write lower-left coordinates of lattice.
-      string = to_str(lat % lower_left(1)) // ' ' // to_str(lat % lower_left(2))
-      if (lat % is_3d) string = string // ' ' // to_str(lat % lower_left(3))
-      write(unit_,*) '    Lower-left =' // string
+      if (lat % is_3d) then
+        write(unit_, *) '    Lower-left = ' // to_str(lat % lower_left(1)) &
+             &// ' ' // to_str(lat % lower_left(2)) // ' ' &
+             &// to_str(lat % lower_left(3))
+      else
+        write(unit_, *) '    Lower-left = ' // to_str(lat % lower_left(1)) &
+             &// ' ' // to_str(lat % lower_left(2))
+      end if
 
       ! Write lattice pitch along each axis.
-      string = to_str(lat % pitch(1)) // ' ' // to_str(lat % pitch(2))
-      if (lat % is_3d) string = string // ' ' // to_str(lat % pitch(3))
-      write(unit_,*) '    Pitch =' // string
+      if (lat % is_3d) then
+        write(unit_, *) '    Pitch = ' // to_str(lat % pitch(1)) &
+             &// ' ' // to_str(lat % pitch(2)) // ' ' &
+             &// to_str(lat % pitch(3))
+      else
+        write(unit_, *) '    Pitch = ' // to_str(lat % pitch(1)) &
+             &// ' ' // to_str(lat % pitch(2))
+      end if
       write(unit_,*)
 
     type is (HexLattice)
@@ -512,14 +526,22 @@ contains
       if (lat % is_3d) write(unit_,*) '    N-axial = ' // to_str(lat % n_axial)
 
       ! Write center coordinates of lattice.
-      string = to_str(lat % center(1)) // ' ' // to_str(lat % center(2))
-      if (lat % is_3d) string = string // ' ' // to_str(lat % center(3))
-      write(unit_,*) '    Center =' // string
+      if (lat % is_3d) then
+        write(unit_, *) '    Center = ' // to_str(lat % center(1)) &
+             &// ' ' // to_str(lat % center(2)) // ' ' &
+             &// to_str(lat % center(3))
+      else
+        write(unit_, *) '    Center = ' // to_str(lat % center(1)) &
+             &// ' ' // to_str(lat % center(2))
+      end if
 
       ! Write lattice pitch along each axis.
-      string = to_str(lat % pitch(1))
-      if (lat % is_3d) string = string // ' ' // to_str(lat % pitch(2))
-      write(unit_,*) '    Pitch =' // string
+      if (lat % is_3d) then
+        write(unit_, *) '    Pitch = ' // to_str(lat % pitch(1)) &
+             &// ' ' // to_str(lat % pitch(2))
+      else
+        write(unit_, *) '    Pitch = ' // to_str(lat % pitch(1))
+      end if
       write(unit_,*)
     end select
 
@@ -1601,8 +1623,8 @@ contains
       write(ou,102) "Leakage Fraction", global_tallies(LEAKAGE) % sum, &
            global_tallies(LEAKAGE) % sum_sq
     else
-      message = "Could not compute uncertainties -- only one active batch simulated!"
-      call warning()
+      if (master) call warning("Could not compute uncertainties -- only one &
+           &active batch simulated!")
 
       write(ou,103) "k-effective (Collision)", global_tallies(K_COLLISION) % sum
       write(ou,103) "k-effective (Track-length)", global_tallies(K_TRACKLENGTH)  % sum
