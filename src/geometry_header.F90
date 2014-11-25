@@ -21,11 +21,13 @@ module geometry_header
 !===============================================================================
 
   type, abstract :: Lattice
-    integer              :: id               ! Universe number for lattice
-    real(8), allocatable :: pitch(:)         ! Pitch along each axis
-    integer, allocatable :: universes(:,:,:) ! Specified universes
-    integer              :: outside          ! Material to fill area outside
-    logical              :: is_3d            ! Lattice has cells on z axis
+    integer              :: id                  ! Universe number for lattice
+    real(8), allocatable :: pitch(:)            ! Pitch along each axis
+    integer, allocatable :: universes(:,:,:)    ! Specified universes
+    integer              :: outside             ! Material to fill area outside
+    logical              :: is_3d               ! Lattice has cells on z axis
+    real(8), allocatable :: rand_limits(:)      ! Random translation limits
+    real(8), allocatable :: rand_trans(:,:,:,:) ! Random translation values
     
     contains
 
@@ -82,8 +84,6 @@ module geometry_header
   type, extends(Lattice) :: RectLattice
     integer               :: n_cells(3)          ! # of cells along each axis
     real(8), allocatable  :: lower_left(:)       ! Global lower-left lat corner
-    real(8), allocatable  :: rand_limits(:)      ! Random translation limits
-    real(8), allocatable  :: rand_trans(:,:,:,:) ! Random translation values
 
     contains
 
@@ -248,7 +248,7 @@ contains
     k = 1
     do i=0,1
       do j=0,1
-        xyz_t = this % get_local_xyz(xyz, i_xyz + (/j, i, 0/))
+        xyz_t = this % get_local_xyz(xyz, i_xyz + (/j, i, 0/), .false.)
         dists(k) = xyz_t(1)**2 + xyz_t(2)**2
         k = k + 1
       end do
@@ -336,6 +336,24 @@ contains
            &+ (this % n_axial/2 - i_xyz(3) + 1) * this % pitch(2)
     else
       local_xyz(3) = xyz(3)
+    end if
+
+    ! Set allow_rand_ to given value or the default value of .true.
+    if (present(allow_rand)) then
+      allow_rand_ = allow_rand
+    else
+      allow_rand_ = .true.
+    end if
+
+    ! Add random translation if necessary.
+    if (allocated(this % rand_trans) .and. allow_rand_ &
+        & .and. this % are_valid_indices(i_xyz)) then
+      local_xyz(1:2) = local_xyz(1:2) &
+          &+ this % rand_trans(i_xyz(1), i_xyz(2), i_xyz(3), 1:2)
+      if (this % is_3d) then
+        local_xyz(3) = local_xyz(3) &
+            &+ this % rand_trans(i_xyz(1), i_xyz(2), i_xyz(3), 3)
+      end if
     end if
   end function get_local_hex
 

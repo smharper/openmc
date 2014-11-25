@@ -1258,9 +1258,11 @@ contains
           ! Upper right and lower left sides.
           edge = -sign(lat % pitch(1)/2.0_8, beta_dir)  ! Oncoming edge
           if (beta_dir > 0.0) then
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/1, 0, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/1, 0, 0/),&
+                 &.false.)
           else
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/-1, 0, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/-1, 0, 0/),&
+                 &.false.)
           end if
           beta = xyz_t(1)*sqrt(3.0_8)/2.0_8 + xyz_t(2)/2.0_8
           if (abs(beta - edge) < FP_PRECISION) then
@@ -1281,9 +1283,11 @@ contains
           ! Lower right and upper left sides.
           edge = -sign(lat % pitch(1)/2.0_8, gama_dir)  ! Oncoming edge
           if (gama_dir > 0.0) then
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/1, -1, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/1, -1, 0/),&
+                 &.false.)
           else
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/-1, 1, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/-1, 1, 0/),&
+                 &.false.)
           end if
           gama = xyz_t(1)*sqrt(3.0_8)/2.0_8 - xyz_t(2)/2.0_8
           if (abs(gama - edge) < FP_PRECISION) then
@@ -1306,9 +1310,11 @@ contains
           ! Upper and lower sides.
           edge = -sign(lat % pitch(1)/2.0_8, v)  ! Oncoming edge
           if (v > 0.0) then
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/0, 1, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/0, 1, 0/),&
+                 &.false.)
           else
-            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/0, -1, 0/))
+            xyz_t = lat % get_local_xyz(parent_coord % xyz, i_xyz+(/0, -1, 0/),&
+                 &.false.)
           end if
           if (abs(xyz_t(2) - edge) < FP_PRECISION) then
             d = INFINITY

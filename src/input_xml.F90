@@ -1355,7 +1355,7 @@ contains
       ! Read random translation limits if present.
       if (check_for_node(node_lat, "random_translate")) then
         n = get_arraysize_double(node_lat, "random_translate")
-        if ((n /=2 .and. .not. lat % is_3d) &
+        if ((n /= 2 .and. .not. lat % is_3d) &
             &.or. (n /= 3 .and. lat % is_3d)) then
           call fatal_error("The number of values in <random_translate> of &
                &lattice " // trim(to_str(lat % id)) // " must be 3 for a 3d &
@@ -1537,10 +1537,18 @@ contains
         end if
       end if
 
-      ! Raise an error for random translations specified in a hex lattice.
+      ! Read random translation limits if present.
       if (check_for_node(node_lat, "random_translate")) then
-        call warning("The <random_translate> subelement is not implemented for &
-             &hexagonal lattices.")
+        n = get_arraysize_double(node_lat, "random_translate")
+        if ((n /= 1 .and. .not. lat % is_3d) &
+            &.or. (n /= 2 .and. lat % is_3d)) then
+          call fatal_error("The number of values in <random_translate> of &
+               &lattice " // trim(to_str(lat % id)) // " must be 2 for a 3d &
+               &lattice or 1 for a 2d lattice.")
+        else
+          allocate(lat % rand_limits(n))
+          call get_node_array(node_lat, "random_translate", lat % rand_limits)
+        end if
       end if
 
       ! Add lattice to dictionary

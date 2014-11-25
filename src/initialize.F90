@@ -756,50 +756,77 @@ contains
 
   subroutine initialize_random_translation()
 
-    integer                 :: i, i_x, i_y, i_z
+    integer                 :: i, n_dims, i_x, i_y, i_z
     class(Lattice), pointer :: lat
+    real(8)                 :: rand_x, rand_y
 
     ! Loop over all lattices.
     do i = 1, n_lattices
       lat => lattices(i) % obj
 
-      ! Ignore the lattice if it is hexagonal.
-      select type(lat)
-      type is (RectLattice)
-
       ! Ignore the lattice if does not have a random translation specified.
       if (.not. allocated(lat % rand_limits)) cycle
 
-      if (.not. lat % is_3d) then
-        allocate(lat % rand_trans(lat % n_cells(1), lat % n_cells(2), 1, 2))
-
-        do i_y = 1, lat % n_cells(2)
-          do i_x = 1, lat % n_cells(1)
-            lat % rand_trans(i_x, i_y, 1, 1) = (2.0_8*prn() - 1.0_8)&
-                &*lat % rand_limits(1)
-            lat % rand_trans(i_x, i_y, 1, 2) = (2.0_8*prn() - 1.0_8)&
-                &*lat % rand_limits(2)
-          end do
-        end do
-
+      ! Get the number of lattice dimensions.
+      if (lat % is_3d) then
+        n_dims = 3
       else
-        allocate(lat % rand_trans(lat % n_cells(1), lat % n_cells(2),&
-                                  &lat % n_cells(3), 3))
+        n_dims = 2
+      end if
 
+      select type(lat)
+
+      type is (RectLattice)
+        allocate(lat % rand_trans(lat % n_cells(1), lat % n_cells(2),&
+             &lat % n_cells(3), n_dims))
         do i_z = 1, lat % n_cells(3)
           do i_y = 1, lat % n_cells(2)
             do i_x = 1, lat % n_cells(1)
-            lat % rand_trans(i_x, i_y, i_z, 1) = (2.0_8*prn() - 1.0_8)&
-                &*lat % rand_limits(1)
-            lat % rand_trans(i_x, i_y, i_z, 2) = (2.0_8*prn() - 1.0_8)&
-                &*lat % rand_limits(2)
-            lat % rand_trans(i_x, i_y, i_z, 3) = (2.0_8*prn() - 1.0_8)&
-                &*lat % rand_limits(3)
+              ! Generate random numbers on the range [-1,1], multiply it by the
+              ! translation limit, and add it do the array.
+              lat % rand_trans(i_x, i_y, i_z, 1) = (2.0_8*prn() - 1.0_8)&
+                   &*lat % rand_limits(1)
+              lat % rand_trans(i_x, i_y, i_z, 2) = (2.0_8*prn() - 1.0_8)&
+                   &*lat % rand_limits(2)
+              if (lat % is_3d) then
+                lat % rand_trans(i_x, i_y, i_z, 3) = (2.0_8*prn() - 1.0_8)&
+                     &*lat % rand_limits(3)
+              end if
             end do
           end do
         end do
 
-      end if
+      type is (HexLattice)
+        allocate(lat % rand_trans(2*lat % n_rings - 1, 2*lat % n_rings - 1,&
+             &lat % n_axial, n_dims))
+        do i_z = 1, lat % n_axial
+          do i_y = 1, 2*lat % n_rings - 1
+            do i_x = 1, 2*lat % n_rings - 1
+              ! Ignore cells outside the lattice.
+              if (.not. lat % are_valid_indices((/i_x, i_y, i_z/))) cycle
+              ! Sample random numbers on the range [-1,1] until we have an (x,y)
+              ! pair that lie within a hexagon.
+              do while (.true.)
+                rand_x = (2.0_8*prn() - 1.0_8) ! actually = x*cos(30)
+                rand_y = (2.0_8*prn() - 1.0_8)
+                ! |x*cos(30) + y*sin(30)| must be < 1 and
+                ! |x*cos(30) - y*sin(30)| must be < 1
+                if (abs(rand_x + rand_y/2.0) < 1.0_8 .and. &
+                     &abs(rand_x - rand_y/2.0) < 1.0_8) exit
+              end do
+              ! Store the (x,y) pair multiplied by the translation limit.
+              lat % rand_trans(i_x, i_y, i_z, 1) = rand_x*2.0_8/sqrt(3.0_8)&
+                   &*lat % rand_limits(1) ! note division by cos(30)
+              lat % rand_trans(i_x, i_y, i_z, 2) = rand_y&
+                   &*lat % rand_limits(1)
+              if (lat % is_3d) then
+                ! For z, simply pick a number from [-1,1]*limit.
+                lat % rand_trans(i_x, i_y, i_z, 3) = (2.0_8*prn() - 1.0_8)&
+                     &*lat % rand_limits(2)
+              end if
+            end do
+          end do
+        end do
       end select
     end do
 
