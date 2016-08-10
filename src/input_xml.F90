@@ -2925,7 +2925,7 @@ contains
         if (check_for_node(node_filt, "bins")) then
           if (temp_str == 'energy' .or. temp_str == 'energyout' .or. &
                temp_str == 'mu' .or. temp_str == 'polar' .or. &
-               temp_str == 'azimuthal') then
+               temp_str == 'azimuthal' .or. temp_str == 'energyshape') then
             n_words = get_arraysize_double(node_filt, "bins")
           else
             n_words = get_arraysize_integer(node_filt, "bins")
@@ -3238,6 +3238,19 @@ contains
           end select
           ! Set the filter index in the tally find_filter array
           t % find_filter(FILTER_AZIMUTHAL) = j
+
+        case ('energyshape')
+          ! Allocate and declare the filter type
+          allocate(EnergyShapeFilter::t % filters(j) % obj)
+          select type (filt => t % filters(j) % obj)
+          type is (EnergyShapeFilter)
+            ! Allocate and store bins
+            filt % n_bins = n_words
+            allocate(filt % bins(n_words))
+            call get_node_array(node_filt, "bins", filt % bins)
+          end select
+          ! Set the filter index in the tally find_filter array
+          t % find_filter(FILTER_ENERGYSHAPE) = j
 
         case default
           ! Specified tally filter is invalid, raise error

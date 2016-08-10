@@ -18,6 +18,9 @@ module tally_filter
 
   implicit none
 
+  integer, parameter :: SHAPE_LAGRANGE = 1, &
+                        SHAPE_HERMITE  = 2
+
 !===============================================================================
 ! MESHFILTER indexes the location of particle events to a regular mesh.  For
 ! tracklength tallies, it will produce multiple valid bins and the bin weight
@@ -190,6 +193,24 @@ module tally_filter
     procedure :: to_statepoint => to_statepoint_azimuthal
     procedure :: text_label => text_label_azimuthal
   end type AzimuthalFilter
+
+!===============================================================================
+! ENERGYSHAPEFILTER fits a piecewise 1D function to the incident neutron energy.
+!===============================================================================
+  type, extends(TallyFilter) :: EnergyShapeFilter
+    real(8), allocatable :: bins(:)
+
+    ! The class of shape function used by this filter.
+    integer :: shape_func = SHAPE_LAGRANGE
+
+    ! The order of the shape function used by this filter.
+    integer :: order = 2
+
+  contains
+    procedure :: get_next_bin => get_next_bin_energyshape
+    procedure :: to_statepoint => to_statepoint_energyshape
+    procedure :: text_label => text_label_energyshape
+  end type EnergyShapeFilter
 
 contains
 
@@ -1487,5 +1508,114 @@ contains
       end if
     end do
   end subroutine find_offset
+
+!===============================================================================
+! EnergyShapeFilter methods
+!===============================================================================
+  subroutine get_next_bin_energyshape(this, p, estimator, current_bin, &
+       next_bin, weight)
+    class(EnergyShapeFilter), intent(in)  :: this
+    type(Particle),           intent(in)  :: p
+    integer,                  intent(in)  :: estimator
+    integer, value,           intent(in)  :: current_bin
+    integer,                  intent(out) :: next_bin
+    real(8),                  intent(out) :: weight
+
+    integer :: n, i_node, i_elem
+    real(8) :: E
+
+    n = this % n_bins
+
+    ! Make sure the correct energy is used.
+    if (estimator == ESTIMATOR_TRACKLENGTH) then
+      E = p % E
+    else
+      E = p % last_E
+    end if
+
+    ! Check if energy of the particle is wihin the domain of the filter.
+    if (E < this % bins(1) .or. E > this % bins(n)) then
+      next_bin = NO_BIN_FOUND
+      weight = ONE
+
+    else
+      ! Find the node just below the incident energy.
+      i_node = binary_search(this % bins, n, E)
+
+      select case (this % shape_func)
+      case (SHAPE_LAGRANGE)
+        select case (this % order)
+        case (1)
+          if (current_bin == NO_BIN_FOUND) then
+            next_bin = i_node
+            weight = (E - this % bins(i_node + 1)) &
+                 / (this % bins(i_node) - this % bins(i_node + 1))
+            if (i_node == 1) weight = 2 * weight
+          else if (current_bin == i_node) then
+            next_bin = i_node + 1
+            weight = (E - this % bins(i_node)) &
+                 / (this % bins(i_node + 1) - this % bins(i_node))
+            if (i_node == n-1) weight = 2 * weight
+          else
+            next_bin = NO_BIN_FOUND
+            weight = ONE
+          end if
+
+        case (2)
+          !i_elem = (i_node / 2) * 2 + 1
+          i_elem = ((i_node - 1) / 2) * 2 + 1
+
+          if (current_bin == NO_BIN_FOUND) then
+            next_bin = i_elem
+            weight = (E - this % bins(i_elem + 1)) &
+                 / (this % bins(i_elem) - this % bins(i_elem + 1)) &
+                 * (E - this % bins(i_elem + 2)) &
+                 / (this % bins(i_elem) - this % bins(i_elem + 2)) &
+                 / 0.156836294488_8
+            if (i_elem == 1) weight = 2 * weight
+          else if (current_bin == i_elem) then
+            next_bin = i_elem + 1
+            weight = (E - this % bins(i_elem)) &
+                 / (this % bins(i_elem + 1) - this % bins(i_elem)) &
+                 * (E - this % bins(i_elem + 2)) &
+                 / (this % bins(i_elem + 1) - this % bins(i_elem + 2)) &
+                 / 0.333423090225_8
+          else if (current_bin == i_elem + 1) then
+            next_bin = i_elem + 2
+            weight = (E - this % bins(i_elem)) &
+                 / (this % bins(i_elem + 2) - this % bins(i_elem)) &
+                 * (E - this % bins(i_elem + 1)) &
+                 / (this % bins(i_elem + 2) - this % bins(i_elem + 1)) &
+                 / 0.156836294488_8
+            if (i_elem == n-2) weight = 2 * weight
+          else
+            next_bin = NO_BIN_FOUND
+            weight = ONE
+          end if
+        end select
+      end select
+
+    end if
+  end subroutine get_next_bin_energyshape
+
+  subroutine to_statepoint_energyshape(this, filter_group)
+    class(EnergyShapeFilter), intent(in) :: this
+    integer(HID_T),           intent(in) :: filter_group
+
+    call write_dataset(filter_group, "type", "energyshape")
+    call write_dataset(filter_group, "n_bins", this % n_bins)
+    call write_dataset(filter_group, "bins", this % bins )
+  end subroutine to_statepoint_energyshape
+
+  function text_label_energyshape(this, bin) result(label)
+    class(EnergyShapeFilter), intent(in) :: this
+    integer,                  intent(in) :: bin
+    character(MAX_LINE_LEN)              :: label
+
+    real(8) :: E0
+
+    E0 = this % bins(bin)
+    label = "Incoming Energy " // trim(to_str(E0))
+  end function text_label_energyshape
 
 end module tally_filter

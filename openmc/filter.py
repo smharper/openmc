@@ -15,7 +15,7 @@ if sys.version_info[0] >= 3:
 
 _FILTER_TYPES = ['universe', 'material', 'cell', 'cellborn', 'surface',
                  'mesh', 'energy', 'energyout', 'mu', 'polar', 'azimuthal',
-                 'distribcell', 'delayedgroup']
+                 'distribcell', 'delayedgroup', 'energyshape']
 
 class Filter(object):
     """A filter used to constrain a tally to a specific criterion, e.g. only
@@ -26,8 +26,8 @@ class Filter(object):
     type : str
         The type of the tally filter. Acceptable values are "universe",
         "material", "cell", "cellborn", "surface", "mesh", "energy",
-        "energyout", "distribcell", "mu", "polar", "azimuthal", and
-        "delayedgroup".
+        "energyout", "distribcell", "mu", "polar", "azimuthal", "delayedgroup",
+        and "energyshape".
     bins : Integral or Iterable of Integral or Iterable of Real
         The bins for the filter. This takes on different meaning for different
         filters. See the OpenMC online documentation for more details.
@@ -177,7 +177,7 @@ class Filter(object):
             for edge in bins:
                 cv.check_greater_than('filter bin', edge, 0, equality=True)
 
-        elif self.type in ['energy', 'energyout']:
+        elif self.type in ['energy', 'energyout', 'energyshape']:
             for edge in bins:
                 if not isinstance(edge, Real):
                     msg = 'Unable to add bin edge "{0}" to a "{1}" Filter ' \
