@@ -204,7 +204,7 @@ module tally_filter
     integer :: shape_func = SHAPE_LAGRANGE
 
     ! The order of the shape function used by this filter.
-    integer :: order = 2
+    integer :: order = 1
 
   contains
     procedure :: get_next_bin => get_next_bin_energyshape
@@ -1523,6 +1523,7 @@ contains
 
     integer :: n, i_node, i_elem
     real(8) :: E
+    real(8) :: x0, x1, x2, integral
 
     n = this % n_bins
 
@@ -1546,48 +1547,49 @@ contains
       case (SHAPE_LAGRANGE)
         select case (this % order)
         case (1)
+          x0 = this % bins(i_node)
+          x1 = this % bins(i_node + 1)
+
           if (current_bin == NO_BIN_FOUND) then
             next_bin = i_node
-            weight = (E - this % bins(i_node + 1)) &
-                 / (this % bins(i_node) - this % bins(i_node + 1))
-            if (i_node == 1) weight = 2 * weight
+            integral = (x1 - x0)
+            if (i_node == 1) integral = integral / TWO
+            weight = (E - x1) / (x0 - x1) / integral
+
           else if (current_bin == i_node) then
             next_bin = i_node + 1
-            weight = (E - this % bins(i_node)) &
-                 / (this % bins(i_node + 1) - this % bins(i_node))
-            if (i_node == n-1) weight = 2 * weight
+            integral = (x1 - x0)
+            if (i_node == n-1) integral = integral / TWO
+            weight = (E - x0) / (x1 - x0) / integral
+
           else
             next_bin = NO_BIN_FOUND
             weight = ONE
           end if
 
         case (2)
-          !i_elem = (i_node / 2) * 2 + 1
           i_elem = ((i_node - 1) / 2) * 2 + 1
+          x0 = this % bins(i_elem)
+          x1 = this % bins(i_elem + 1)
+          x2 = this % bins(i_elem + 2)
 
           if (current_bin == NO_BIN_FOUND) then
             next_bin = i_elem
-            weight = (E - this % bins(i_elem + 1)) &
-                 / (this % bins(i_elem) - this % bins(i_elem + 1)) &
-                 * (E - this % bins(i_elem + 2)) &
-                 / (this % bins(i_elem) - this % bins(i_elem + 2)) &
-                 / 0.156836294488_8
-            if (i_elem == 1) weight = 2 * weight
+            integral = (x2 - x0) * (TWO*x0 - THREE*x1 + x2) / 6.0_8 / (x0 - x1)
+            if (i_elem == 1) integral = integral / TWO
+            weight = (E - x1) / (x0 - x1) * (E - x2) / (x0 - x2) / integral
+
           else if (current_bin == i_elem) then
             next_bin = i_elem + 1
-            weight = (E - this % bins(i_elem)) &
-                 / (this % bins(i_elem + 1) - this % bins(i_elem)) &
-                 * (E - this % bins(i_elem + 2)) &
-                 / (this % bins(i_elem + 1) - this % bins(i_elem + 2)) &
-                 / 0.333423090225_8
+            integral = (x2 - x0)**3 / 12.0_8 / (x1 - x0) / (x2 - x1)
+            weight = (E - x0) / (x1 - x0) * (E - x2) / (x1 - x2) / integral
+
           else if (current_bin == i_elem + 1) then
             next_bin = i_elem + 2
-            weight = (E - this % bins(i_elem)) &
-                 / (this % bins(i_elem + 2) - this % bins(i_elem)) &
-                 * (E - this % bins(i_elem + 1)) &
-                 / (this % bins(i_elem + 2) - this % bins(i_elem + 1)) &
-                 / 0.156836294488_8
-            if (i_elem == n-2) weight = 2 * weight
+            integral = (x0 - x2) * (x0 - THREE*x1 + TWO*x2) / 6.0_8 / (x1 - x2)
+            if (i_elem == n-2) integral = integral / TWO
+            weight = (E - x0) / (x2 - x0) * (E - x1) / (x2 - x1) / integral
+
           else
             next_bin = NO_BIN_FOUND
             weight = ONE
