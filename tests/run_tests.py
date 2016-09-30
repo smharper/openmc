@@ -477,6 +477,7 @@ for key in iter(tests):
     else:
         logfile = glob.glob('build/Testing/Temporary/LastTest.log')
     if len(logfile) > 0:
+        with open(logfile) as fh: print(fh.read())
         logfilename = os.path.split(logfile[0])[1]
         logfilename = os.path.splitext(logfilename)[0]
         logfilename = logfilename + '_{0}.log'.format(test.name)
