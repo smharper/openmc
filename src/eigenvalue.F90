@@ -5,6 +5,7 @@ module eigenvalue
   use constants,   only: ZERO
   use error,       only: fatal_error, warning
   use global
+  use initialize,  only: calculate_work, allocate_banks
   use math,        only: t_percentile
   use mesh,        only: count_bank_sites
   use mesh_header, only: RegularMesh
@@ -75,6 +76,8 @@ contains
     total = finish
     call MPI_BCAST(total, 1, MPI_INTEGER8, n_procs - 1, &
          mpi_intracomm, mpi_err)
+    n_particles = total
+    call calculate_work()
 
 #else
     start  = 0_8
@@ -116,27 +119,34 @@ contains
 
     ! Allocate temporary source bank
     index_temp = 0_8
-    if (.not. allocated(temp_sites)) allocate(temp_sites(3*work))
+    if (allocated(temp_sites)) deallocate(temp_sites)
+    allocate(temp_sites(3*work))
 
+!    do i = 1, int(n_bank,4)
+!
+!      ! If there are less than n_particles particles banked, automatically add
+!      ! int(n_particles/total) sites to temp_sites. For example, if you need
+!      ! 1000 and 300 were banked, this would add 3 source sites per banked site
+!      ! and the remaining 100 would be randomly sampled.
+!      if (total < n_particles) then
+!        do j = 1, int(n_particles/total)
+!          index_temp = index_temp + 1
+!          temp_sites(index_temp) = fission_bank(i)
+!        end do
+!      end if
+!
+!      ! Randomly sample sites needed
+!      if (prn() < p_sample) then
+!        index_temp = index_temp + 1
+!        temp_sites(index_temp) = fission_bank(i)
+!      end if
+!    end do
     do i = 1, int(n_bank,4)
-
-      ! If there are less than n_particles particles banked, automatically add
-      ! int(n_particles/total) sites to temp_sites. For example, if you need
-      ! 1000 and 300 were banked, this would add 3 source sites per banked site
-      ! and the remaining 100 would be randomly sampled.
-      if (total < n_particles) then
-        do j = 1, int(n_particles/total)
-          index_temp = index_temp + 1
-          temp_sites(index_temp) = fission_bank(i)
-        end do
-      end if
-
-      ! Randomly sample sites needed
-      if (prn() < p_sample) then
-        index_temp = index_temp + 1
-        temp_sites(index_temp) = fission_bank(i)
-      end if
+      index_temp = index_temp + 1
+      temp_sites(index_temp) = fission_bank(i)
     end do
+
+    call allocate_banks()
 
     ! At this point, the sampling of source sites is done and now we need to
     ! figure out where to send source sites. Since it is possible that one
