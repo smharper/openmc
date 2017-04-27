@@ -639,8 +639,16 @@ contains
     integer :: alloc_err  ! allocation error code
 
     ! Allocate source bank
-    if (allocated(source_bank)) deallocate(source_bank)
-    allocate(source_bank(work), STAT=alloc_err)
+    alloc_err = 0
+    if (allocated(source_bank)) then
+      if (size(source_bank) < 3 * work / 2) then
+        write(*, *) 'REALLOCATING'
+        deallocate(source_bank)
+        allocate(source_bank(3*work), STAT=alloc_err)
+      end if
+    else
+      allocate(source_bank(3*work), STAT=alloc_err)
+    end if
 
     ! Check for allocation errors
     if (alloc_err /= 0) then
@@ -659,18 +667,42 @@ contains
 !$omp parallel
       thread_id = omp_get_thread_num()
 
-      if (allocated(fission_bank)) deallocate(fission_bank)
-      if (thread_id == 0) then
-        allocate(fission_bank(3*work))
+      if (allocated(fission_bank)) then
+        if (size(fission_bank) < 3 * work / 2) then
+          deallocate(fission_bank)
+          if (thread_id == 0) then
+            allocate(fission_bank(3*work))
+          else
+            allocate(fission_bank(3*work/n_threads))
+          end if
+        end if
       else
-        allocate(fission_bank(3*work/n_threads))
+        if (thread_id == 0) then
+          allocate(fission_bank(3*work))
+        else
+          allocate(fission_bank(3*work/n_threads))
+        end if
       end if
 !$omp end parallel
-      if (allocated(master_fission_bank)) deallocate(master_fission_bank)
-      allocate(master_fission_bank(3*work), STAT=alloc_err)
+
+      if (allocated(master_fission_bank)) then
+        if (size(master_fission_bank) < 3 * work / 2) then
+          deallocate(master_fission_bank)
+          allocate(master_fission_bank(3*work), STAT=alloc_err)
+        end if
+      else
+        allocate(master_fission_bank(3*work), STAT=alloc_err)
+      end if
+
 #else
-      if (allocated(fission_bank)) deallocate(fission_bank)
-      allocate(fission_bank(3*work), STAT=alloc_err)
+      if (allocated(fission_bank)) then
+        if (size(fission_bank) < 3 * work / 2) then
+          deallocate(fission_bank)
+          allocate(fission_bank(3*work), STAT=alloc_err)
+        end if
+      else
+        allocate(fission_bank(3*work), STAT=alloc_err)
+      end if
 #endif
 
       ! Check for allocation errors

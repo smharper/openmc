@@ -119,8 +119,14 @@ contains
 
     ! Allocate temporary source bank
     index_temp = 0_8
-    if (allocated(temp_sites)) deallocate(temp_sites)
-    allocate(temp_sites(3*work))
+    if (allocated(temp_sites)) then
+      if (size(temp_sites) < 3 * work / 2) then
+        deallocate(temp_sites)
+        allocate(temp_sites(3*work))
+      end if
+    else
+      allocate(temp_sites(3*work))
+    end if
 
 !    do i = 1, int(n_bank,4)
 !
