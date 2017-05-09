@@ -245,6 +245,7 @@ contains
     this % secondary_bank(n) % uvw(:) = uvw
     this % n_secondary = n
     this % secondary_bank(this % n_secondary) % E = this % E
+    this % secondary_bank(this % n_secondary) % t = this % t
     if (.not. run_CE) then
       this % secondary_bank(this % n_secondary) % E = real(this % g, 8)
     end if
