@@ -1177,6 +1177,31 @@ contains
           end if
         end if
 
+
+      case (SCORE_ABSORPTION_AGE)
+        if (t % estimator == ESTIMATOR_ANALOG) then
+          if (survival_biasing) then
+            ! No absorption events actually occur if survival biasing is on --
+            ! just use weight absorbed in survival biasing
+            score = p % absorb_wgt * flux * (p % t - p % birth_t)
+          else
+            ! Skip any event where the particle wasn't absorbed
+            if (p % event == EVENT_SCATTER) cycle SCORE_LOOP
+            ! All fission and absorption events will contribute here, so we
+            ! can just use the particle's weight entering the collision
+            score = p % last_wgt * flux * (p % t - p % birth_t)
+          end if
+
+        else
+          if (i_nuclide > 0) then
+            score = micro_xs(i_nuclide) % absorption * atom_density * flux &
+                 * (p % t - p % birth_t)
+          else
+            score = material_xs % absorption * flux * (p % t - p % birth_t)
+          end if
+        end if
+
+
       case default
         if (t % estimator == ESTIMATOR_ANALOG) then
           ! Any other score is assumed to be a MT number. Thus, we just need

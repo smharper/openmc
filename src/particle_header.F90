@@ -46,6 +46,8 @@ module particle_header
     ! Particle coordinates
     integer          :: n_coord          ! number of current coordinates
     type(LocalCoord) :: coord(MAX_COORD) ! coordinates for all levels
+    real(8)          :: t                ! time coordiante
+    real(8)          :: birth_t          ! birth time of the particle
 
     ! Energy Data
     real(8)    :: E      ! post-collision energy

@@ -3786,6 +3786,17 @@ contains
 
           case ('elastic', '(n,elastic)')
             t % score_bins(j) = ELASTIC
+
+          case ('absorption_age')
+            t % score_bins(j) = SCORE_ABSORPTION_AGE
+            if (t % find_filter(FILTER_ENERGYOUT) > 0) then
+              call fatal_error("Cannot tally absorption age with an outgoing &
+                   &energy filter.")
+            end if
+            if (t % estimator == ESTIMATOR_TRACKLENGTH) then
+              t % estimator = ESTIMATOR_COLLISION
+            end if
+
           case ('(n,2nd)')
             t % score_bins(j) = N_2ND
           case ('(n,na)')
