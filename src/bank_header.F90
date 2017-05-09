@@ -15,6 +15,7 @@ module bank_header
     real(C_DOUBLE) :: xyz(3)        ! location of bank particle
     real(C_DOUBLE) :: uvw(3)        ! diretional cosines
     real(C_DOUBLE) :: E             ! energy / energy group if in MG mode.
+    real(C_DOUBLE) :: t             ! time of this banked site
     integer(C_INT) :: delayed_group ! delayed group
   end type Bank
 

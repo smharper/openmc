@@ -69,9 +69,6 @@ contains
     ! Every particle starts with no accumulated flux derivative.
     if (active_tallies % size() > 0) call zero_flux_derivs()
 
-    p % birth_t = ZERO
-    p % t = ZERO
-
     EVENT_LOOP: do
       ! If the cell hasn't been determined based on the particle's location,
       ! initiate a search for the current cell. This generally happens at the

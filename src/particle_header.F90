@@ -214,6 +214,8 @@ contains
       this % last_g         = int(src % E)
       this % E              = energy_bin_avg(this % g)
     end if
+    this % t                = src % t
+    this % birth_t          = src % t
     this % last_E           = this % E
 
   end subroutine initialize_from_source

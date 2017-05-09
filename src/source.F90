@@ -111,6 +111,7 @@ contains
 
     ! Set weight to one by default
     site % wgt = ONE
+    site % t = ZERO
 
     ! Set the random number generator to the source stream.
     call prn_set_stream(STREAM_SOURCE)

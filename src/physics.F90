@@ -1076,6 +1076,7 @@ contains
     real(8) :: nu_t                     ! total nu
     real(8) :: weight                   ! weight adjustment for ufs method
     logical :: in_mesh                  ! source site in ufs mesh?
+    real(8) :: decay_rate               ! decay rate of the delayed group
     type(Nuclide),  pointer :: nuc
 
     ! Get pointers
@@ -1154,6 +1155,15 @@ contains
       ! Increment the number of neutrons born delayed
       if (p % delayed_group > 0) then
         nu_d(p % delayed_group) = nu_d(p % delayed_group) + 1
+      end if
+
+      ! Set the time of the emission of this neutron.
+      if (p % delayed_group > 0) then
+        decay_rate = nuc % reactions(i_reaction) &
+             % products(1 + p % delayed_group) % decay_rate
+        bank_array(i) % t = p % t - log(prn()) / decay_rate
+      else
+        bank_array(i) % t = p % t
       end if
     end do
 
