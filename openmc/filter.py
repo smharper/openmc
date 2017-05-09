@@ -15,7 +15,7 @@ import openmc.checkvalue as cv
 
 _FILTER_TYPES = ['universe', 'material', 'cell', 'cellborn', 'surface',
                  'mesh', 'energy', 'energyout', 'mu', 'polar', 'azimuthal',
-                 'distribcell', 'delayedgroup', 'energyfunction']
+                 'distribcell', 'delayedgroup', 'energyfunction', 'time']
 
 _CURRENT_NAMES = {1:  'x-min out', 2:  'x-min in',
                   3:  'x-max out', 4:  'x-max in',
@@ -1948,5 +1948,76 @@ class EnergyFunctionFilter(Filter):
         filter_bins = np.tile(filter_bins, tile_factor)
         df = pd.concat([df, pd.DataFrame(
             {self.short_name.lower(): filter_bins})])
+
+        return df
+
+
+class TimeFilter(RealFilter):
+    """Bins tally events based on the incident particle time coordinate.
+
+    Parameters
+    ----------
+    bins : Iterable of Real
+        A grid of time values in s.
+
+    Attributes
+    ----------
+    bins : Iterable of Real
+        A grid of time values in s.
+    num_bins : Integral
+        The number of filter bins
+    stride : Integral
+        The number of filter, nuclide and score bins within each of this
+        filter's bins.
+
+    """
+
+    def get_bin_index(self, filter_bin):
+        # Use lower energy bound to find index for RealFilters
+        deltas = np.abs(self.bins - filter_bin[1]) / filter_bin[1]
+        min_delta = np.min(deltas)
+        if min_delta < 1E-3:
+            return deltas.argmin() - 1
+        else:
+            msg = 'Unable to get the bin index for Filter since "{0}" ' \
+                  'is not one of the bins'.format(filter_bin)
+            raise ValueError(msg)
+
+    def check_bins(self, bins):
+        for edge in bins:
+            if not isinstance(edge, Real):
+                msg = 'Unable to add bin edge "{0}" to a "{1}" ' \
+                      'since it is a non-integer or floating point ' \
+                      'value'.format(edge, type(self))
+                raise ValueError(msg)
+            elif edge < 0.:
+                msg = 'Unable to add bin edge "{0}" to a "{1}" ' \
+                      'since it is a negative value'.format(edge, type(self))
+                raise ValueError(msg)
+
+        # Check that bin edges are monotonically increasing
+        for index in range(1, len(bins)):
+            if bins[index] < bins[index-1]:
+                msg = 'Unable to add bin edges "{0}" to a "{1}" Filter ' \
+                      'since they are not monotonically ' \
+                      'increasing'.format(bins, type(self))
+                raise ValueError(msg)
+
+    def get_pandas_dataframe(self, data_size, **kwargs):
+        # Initialize Pandas DataFrame
+        import pandas as pd
+        df = pd.DataFrame()
+
+        # Extract the lower and upper energy bounds, then repeat and tile
+        # them as necessary to account for other filters.
+        lo_bins = np.repeat(self.bins[:-1], self.stride)
+        hi_bins = np.repeat(self.bins[1:], self.stride)
+        tile_factor = data_size // len(lo_bins)
+        lo_bins = np.tile(lo_bins, tile_factor)
+        hi_bins = np.tile(hi_bins, tile_factor)
+
+        # Add the new energy columns to the DataFrame.
+        df.loc[:, self.short_name.lower() + ' low [s]'] = lo_bins
+        df.loc[:, self.short_name.lower() + ' high [s]'] = hi_bins
 
         return df

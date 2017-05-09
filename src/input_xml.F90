@@ -3005,7 +3005,7 @@ contains
 
         ! Determine number of bins
         select case(temp_str)
-        case ("energy", "energyout", "mu", "polar", "azimuthal")
+        case ("energy", "energyout", "mu", "polar", "azimuthal", "time")
           if (.not. check_for_node(node_filt, "bins")) then
             call fatal_error("Bins not set in filter on tally " &
                  // trim(to_str(t % id)))
@@ -3348,6 +3348,19 @@ contains
           end select
           ! Set the filter index in the tally find_filter array
           t % find_filter(FILTER_ENERGYFUNCTION) = j
+
+        case ('time')
+          ! Allocate and declare the filter type
+          allocate(TimeFilter::t % filters(j) % obj)
+          select type (filt => t % filters(j) % obj)
+          type is (TimeFilter)
+            ! Allocate and store bins
+            filt % n_bins = n_words - 1
+            allocate(filt % bins(n_words))
+            call get_node_array(node_filt, "bins", filt % bins)
+          end select
+          ! Set the filter index in the tally find_filter array
+          t % find_filter(FILTER_TIME) = j
 
         case default
           ! Specified tally filter is invalid, raise error
@@ -3787,7 +3800,7 @@ contains
           case ('elastic', '(n,elastic)')
             t % score_bins(j) = ELASTIC
 
-          case ('absorption_age')
+          case ('absorption-age')
             t % score_bins(j) = SCORE_ABSORPTION_AGE
             if (t % find_filter(FILTER_ENERGYOUT) > 0) then
               call fatal_error("Cannot tally absorption age with an outgoing &

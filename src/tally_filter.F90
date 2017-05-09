@@ -205,6 +205,18 @@ module tally_filter
     procedure :: text_label => text_label_energyfunction
   end type EnergyFunctionFilter
 
+!===============================================================================
+! TimeFilter bins by the time coordinate of the incident neutron.
+!===============================================================================
+  type, extends(TallyFilter) :: TimeFilter
+    real(8), allocatable :: bins(:)
+
+  contains
+    procedure :: get_next_bin => get_next_bin_time
+    procedure :: to_statepoint => to_statepoint_time
+    procedure :: text_label => text_label_time
+  end type TimeFilter
+
 contains
 
 !===============================================================================
@@ -1363,6 +1375,61 @@ contains
            ", ..., ", this % y(size(this % y)), "]"
     end select
   end function text_label_energyfunction
+
+!===============================================================================
+! TimeFilter methods
+!===============================================================================
+  subroutine get_next_bin_time(this, p, estimator, current_bin, next_bin, &
+       weight)
+    class(TimeFilter), intent(in)  :: this
+    type(Particle),    intent(in)  :: p
+    integer,           intent(in)  :: estimator
+    integer, value,    intent(in)  :: current_bin
+    integer,           intent(out) :: next_bin
+    real(8),           intent(out) :: weight
+
+    integer :: n
+    real(8) :: E
+
+    if (current_bin == NO_BIN_FOUND) then
+      n = this % n_bins
+
+      ! Check if energy of the particle is within the time bins.
+      if (p % t < this % bins(1) .or. p % t > this % bins(n + 1)) then
+        next_bin = NO_BIN_FOUND
+        weight = ERROR_REAL
+      else
+        ! Search to find the time bin
+        next_bin = binary_search(this % bins, n + 1, p % t)
+        weight = ONE
+      end if
+
+    else
+      next_bin = NO_BIN_FOUND
+      weight = ERROR_REAL
+    end if
+  end subroutine get_next_bin_time
+
+  subroutine to_statepoint_time(this, filter_group)
+    class(TimeFilter), intent(in) :: this
+    integer(HID_T),    intent(in) :: filter_group
+
+    call write_dataset(filter_group, "type", "time")
+    call write_dataset(filter_group, "n_bins", this % n_bins)
+    call write_dataset(filter_group, "bins", this % bins)
+  end subroutine to_statepoint_time
+
+  function text_label_time(this, bin) result(label)
+    class(TimeFilter),   intent(in) :: this
+    integer,             intent(in) :: bin
+    character(MAX_LINE_LEN)         :: label
+
+    real(8) :: t0, t1
+
+    t0 = this % bins(bin)
+    t1 = this % bins(bin + 1)
+    label = "Time [" // trim(to_str(t0)) // ", " // trim(to_str(t1)) // ")"
+  end function text_label_time
 
 !===============================================================================
 ! FIND_OFFSET (for distribcell) uses a given map number, a target cell ID, and
