@@ -244,6 +244,8 @@ contains
          c_loc(tmpb(1)%E)), H5T_NATIVE_DOUBLE, hdf5_err)
     call h5tinsert_f(hdf5_bank_t, "delayed_group", h5offsetof(c_loc(tmpb(1)), &
          c_loc(tmpb(1)%delayed_group)), H5T_NATIVE_INTEGER, hdf5_err)
+    call h5tinsert_f(hdf5_bank_t, "t", h5offsetof(c_loc(tmpb(1)), &
+         c_loc(tmpb(1)%t)), H5T_NATIVE_DOUBLE, hdf5_err)
 
     ! Determine type for integer(8)
     hdf5_integer8_t = h5kind_to_type(8, H5_INTEGER_KIND)
