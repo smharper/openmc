@@ -21,6 +21,7 @@ module tally_header
     integer :: diff_material
     integer :: diff_nuclide
     real(8) :: flux_deriv
+    logical :: test_maxwell
   end type TallyDerivative
 
 !===============================================================================

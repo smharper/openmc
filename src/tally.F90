@@ -4103,7 +4103,7 @@ contains
 ! 4. Analog- and collision-estimated tallies are scored.
 ! 5. This subroutine is called.
 ! 6. Particle is killed and no more tallies are scored.
-! Hence, it is safe to assume that only derivative of the scattering cross
+! Hence, it is safe to assume that only derivatives of the scattering cross
 ! section need to be computed here.
 !===============================================================================
 
@@ -4112,6 +4112,7 @@ contains
 
     integer :: i, j, l
     real(8) :: dsigT, dsigA, dsigF
+    real(8) :: kT
 
     ! A void material cannot be perturbed so it will not affect flux derivatives
     if (p % material == MATERIAL_VOID) return
@@ -4169,6 +4170,15 @@ contains
                     deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
                          / (micro_xs(mat % nuclide(l)) % total &
                          - micro_xs(mat % nuclide(l)) % absorption)
+                    if (p % event_MT == ELASTIC .and. deriv % test_maxwell) then
+                      kT = p % sqrtkT * p % sqrtkT
+                      deriv % flux_deriv = deriv % flux_deriv &
+                           + (-THREE * kT + TWO * p % target_v2 * nuc % awr) &
+                           / (TWO * kT * kT / K_BOLTZMANN)
+                      !write(*, *) kT, p % target_v2 * nuc % awr
+                      !write(*, *) sqrt(p % target_v2 / MASS_NEUTRON_EV) &
+                      !    * C_LIGHT
+                    end if
                     ! Note that this is an approximation!  The real scattering
                     ! cross section is Sigma_s(E'->E, uvw'->uvw) =
                     ! Sigma_s(E') * P(E'->E, uvw'->uvw).  We are assuming that

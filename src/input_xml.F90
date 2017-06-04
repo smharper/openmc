@@ -2964,6 +2964,7 @@ contains
         case("temperature")
           deriv % variable = DIFF_TEMPERATURE
           call get_node_value(node_deriv, "material", deriv % diff_material)
+          call get_node_value(node_deriv, "test_maxwell", deriv % test_maxwell)
         end select
       end associate
     end do

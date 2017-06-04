@@ -361,7 +361,7 @@ contains
 
         ! Perform collision physics for elastic scattering
         call elastic_scatter(i_nuclide, nuc % reactions(1), kT, &
-             p % E, p % coord(1) % uvw, p % mu, p % wgt)
+             p % E, p % coord(1) % uvw, p % mu, p % wgt, p % target_v2)
       end if
 
       p % event_MT = ELASTIC
@@ -434,7 +434,7 @@ contains
 ! target.
 !===============================================================================
 
-  subroutine elastic_scatter(i_nuclide, rxn, kT, E, uvw, mu_lab, wgt)
+  subroutine elastic_scatter(i_nuclide, rxn, kT, E, uvw, mu_lab, wgt, target_v2)
     integer, intent(in)     :: i_nuclide
     type(Reaction), intent(in) :: rxn
     real(8), intent(in)     :: kT      ! temperature in eV
@@ -442,6 +442,7 @@ contains
     real(8), intent(inout)  :: uvw(3)
     real(8), intent(out)    :: mu_lab
     real(8), intent(inout)  :: wgt
+    real(8), intent(out)    :: target_v2
 
     real(8) :: awr       ! atomic weight ratio of target
     real(8) :: mu_cm     ! cosine of polar angle in center-of-mass
@@ -452,7 +453,7 @@ contains
     real(8) :: uvw_cm(3) ! directional cosines in center-of-mass
     type(Nuclide), pointer :: nuc
 
-    ! get pointer to nuclide
+    ! Get pointer to nuclide
     nuc => nuclides(i_nuclide)
 
     vel = sqrt(E)
@@ -468,6 +469,7 @@ contains
     else
       v_t = ZERO
     end if
+    target_v2 = dot_product(v_t, v_t)
 
     ! Velocity of center-of-mass
     v_cm = (v_n + awr*v_t)/(awr + ONE)

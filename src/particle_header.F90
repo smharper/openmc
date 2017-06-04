@@ -73,6 +73,7 @@ module particle_header
     integer    :: event_nuclide ! index in nuclides array
     integer    :: event_MT      ! reaction MT
     integer    :: delayed_group ! delayed group
+    real(8)    :: target_v2     ! squared velocity of the collision target
 
     ! Post-collision physical data
     integer    :: n_bank        ! number of fission sites banked
