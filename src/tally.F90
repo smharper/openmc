@@ -4162,22 +4162,21 @@ contains
                        nuc % mp_present .and. &
                        p % last_E >= nuc % multipole % start_E .and. &
                        p % last_E <= nuc % multipole % end_E) then
-                    ! phi is proportional to Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
-                    call multipole_deriv_eval(nuc % multipole, p % last_E, &
-                         p % sqrtkT, dsigT, dsigA, dsigF)
-                    deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
-                         / (micro_xs(mat % nuclide(l)) % total &
-                         - micro_xs(mat % nuclide(l)) % absorption)
                     if (p % event_MT == ELASTIC .and. deriv % test_maxwell) then
                       kT = p % sqrtkT * p % sqrtkT
                       deriv % flux_deriv = deriv % flux_deriv &
                            + (-THREE * kT + TWO * p % target_v2 * nuc % awr) &
                            / (TWO * kT * kT / K_BOLTZMANN)
                       !write(*, *) kT, p % target_v2 * nuc % awr
-                      !write(*, *) sqrt(p % target_v2 / MASS_NEUTRON_EV) &
-                      !    * C_LIGHT
+                    else if (p % event_MT == ELASTIC) then
+                      ! phi is proportional to Sigma_s
+                      ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
+                      ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
+                      call multipole_deriv_eval(nuc % multipole, p % last_E, &
+                           p % sqrtkT, dsigT, dsigA, dsigF)
+                      deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
+                           / (micro_xs(mat % nuclide(l)) % total &
+                           - micro_xs(mat % nuclide(l)) % absorption)
                     end if
                     ! Note that this is an approximation!  The real scattering
                     ! cross section is Sigma_s(E'->E, uvw'->uvw) =
