@@ -81,6 +81,16 @@ def _faddeeva(z):
         return -np.conj(wofz(z.conjugate()))
 
 
+def _faddeeva_derivative(z, order):
+    if order == 0:
+        return _faddeeva(z)
+    elif order == 1:
+        return -2.0 * z * _faddeeva(z) + 2.0j / sqrt(pi)
+    else:
+        return (-2.0 * z * _faddeeva_derivative(z, order-1)
+                -2.0 * (order - 1) * _faddeeva_derivative(z, order-2))
+
+
 def _broaden_wmp_polynomials(E, dopp, n):
     r"""Evaluate Doppler-broadened windowed multipole curvefit.
 
@@ -660,4 +670,89 @@ class WindowedMultipole(EqualityMixin):
         """
 
         fun = np.vectorize(lambda x: self._evaluate(x, T))
+        return fun(E)
+
+    def _evaluate_deriv(self, E, T):
+        if E < self.start_E: return (0, 0, 0)
+        if E > self.end_E: return (0, 0, 0)
+
+        # ======================================================================
+        # Bookkeeping
+
+        # Define some frequently used variables.
+        sqrtkT = sqrt(K_BOLTZMANN * T)
+        sqrtE = sqrt(E)
+        invE = 1.0 / E
+        dopp = self.sqrtAWR / sqrtkT
+
+        # Locate us.  The i_window calc omits a + 1 present in F90 because of
+        # the 1-based vs. 0-based indexing.  Similarly startw needs to be
+        # decreased by 1.  endw does not need to be decreased because
+        # range(startw, endw) does not include endw.
+        i_window = int(np.floor((sqrtE - sqrt(self.start_E)) / self.spacing))
+        startw = self.w_start[i_window] - 1
+        endw = self.w_end[i_window]
+
+        # Fill in factors.  Because of the unique interference dips in scatering
+        # resonances, the total cross section has a special "factor" that does
+        # not appear in the absorption and fission equations.
+        if startw <= endw:
+            twophi = np.zeros(self.num_l, dtype=np.float)
+            sigT_factor = np.zeros(self.num_l, dtype=np.cfloat)
+
+            for iL in range(self.num_l):
+                twophi[iL] = self.pseudo_k0RS[iL] * sqrtE
+                if iL == 1:
+                    twophi[iL] = twophi[iL] - np.arctan(twophi[iL])
+                elif iL == 2:
+                    arg = 3.0 * twophi[iL] / (3.0 - twophi[iL]**2)
+                    twophi[iL] = twophi[iL] - np.arctan(arg)
+                elif iL == 3:
+                    arg = (twophi[iL] * (15.0 - twophi[iL]**2)
+                           / (15.0 - 6.0 * twophi[iL]**2))
+                    twophi[iL] = twophi[iL] - np.arctan(arg)
+
+            twophi = 2.0 * twophi
+            sigT_factor = np.cos(twophi) - 1j*np.sin(twophi)
+
+        # Initialize the ouptut cross sections.
+        sigT = 0.0
+        sigA = 0.0
+        sigF = 0.0
+
+        # ======================================================================
+        # Add the contribution from the curvefit polynomial.
+
+
+        # ======================================================================
+        # Add the contribution from the poles in this window.
+
+        for i_pole in range(startw, endw):
+            Z = (sqrtE - self.data[i_pole, _MP_EA]) * dopp
+            w_val = -invE * sqrt(pi) * 0.5 * _faddeeva_derivative(Z, 2)
+            if self.formalism == 'MLBW':
+                sigT += ((self.data[i_pole, _MLBW_RT] *
+                          sigT_factor[self.l_value[i_pole]-1] +
+                          self.data[i_pole, _MLBW_RX]) * w_val).real
+                sigA += (self.data[i_pole, _MLBW_RA] * w_val).real
+                if self.fissionable:
+                    sigF += (self.data[i_pole, _MLBW_RF] * w_val).real
+            elif self.formalism == 'RM':
+                sigT += (self.data[i_pole, _RM_RT] * w_val *
+                         sigT_factor[self.l_value[i_pole]-1]).real
+                sigA += (self.data[i_pole, _RM_RA] * w_val).real
+                if self.fissionable:
+                    sigF += (self.data[i_pole, _RM_RF] * w_val).real
+            else:
+                raise ValueError('Unrecognized/Unsupported R-matrix'
+                                 ' formalism')
+
+        sigT *= -0.5 * self.sqrtAWR / np.sqrt(K_BOLTZMANN) * T**-1.5
+        sigA *= -0.5 * self.sqrtAWR / np.sqrt(K_BOLTZMANN) * T**-1.5
+        sigF *= -0.5 * self.sqrtAWR / np.sqrt(K_BOLTZMANN) * T**-1.5
+
+        return sigT, sigA, sigF
+
+    def evaluate_deriv(self, E, T):
+        fun = np.vectorize(lambda x: self._evaluate_deriv(x, T))
         return fun(E)
