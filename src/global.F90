@@ -33,38 +33,38 @@ module global
   ! GEOMETRY-RELATED VARIABLES
 
   ! Main arrays
-  type(Cell),             allocatable, target :: cells(:)
-  type(Universe),         allocatable, target :: universes(:)
-  type(LatticeContainer), allocatable, target :: lattices(:)
-  type(SurfaceContainer), allocatable, target :: surfaces(:)
+  !type(Cell),             allocatable, target :: cells(:)
+  !type(Universe),         allocatable, target :: universes(:)
+  !type(LatticeContainer), allocatable, target :: lattices(:)
+  !type(SurfaceContainer), allocatable, target :: surfaces(:)
   type(Material),         allocatable, target :: materials(:)
   type(ObjectPlot),       allocatable, target :: plots(:)
 
   type(VolumeCalculation), allocatable :: volume_calcs(:)
 
   ! Size of main arrays
-  integer(C_INT32_T), bind(C) :: n_cells     ! # of cells
-  integer :: n_universes ! # of universes
-  integer :: n_lattices  ! # of lattices
-  integer :: n_surfaces  ! # of surfaces
+  !integer(C_INT32_T), bind(C) :: n_cells     ! # of cells
+  !integer :: n_universes ! # of universes
+  !integer :: n_lattices  ! # of lattices
+  !integer :: n_surfaces  ! # of surfaces
   integer(C_INT32_T), bind(C) :: n_materials ! # of materials
   integer :: n_plots     ! # of plots
 
   ! These dictionaries provide a fast lookup mechanism -- the key is the
   ! user-specified identifier and the value is the index in the corresponding
   ! array
-  type(DictIntInt) :: cell_dict
-  type(DictIntInt) :: universe_dict
-  type(DictIntInt) :: lattice_dict
-  type(DictIntInt) :: surface_dict
+  !type(DictIntInt) :: cell_dict
+  !type(DictIntInt) :: universe_dict
+  !type(DictIntInt) :: lattice_dict
+  !type(DictIntInt) :: surface_dict
   type(DictIntInt) :: material_dict
   type(DictIntInt) :: mesh_dict
   type(DictIntInt) :: filter_dict
   type(DictIntInt) :: tally_dict
   type(DictIntInt) :: plot_dict
 
-  ! Number of lost particles
-  integer :: n_lost_particles
+  !! Number of lost particles
+  !integer :: n_lost_particles
 
   ! ============================================================================
   ! ENERGY TREATMENT RELATED VARIABLES
@@ -461,10 +461,10 @@ contains
     integer :: i ! Loop Index
 
     ! Deallocate cells, surfaces, materials
-    if (allocated(cells)) deallocate(cells)
-    if (allocated(universes)) deallocate(universes)
-    if (allocated(lattices)) deallocate(lattices)
-    if (allocated(surfaces)) deallocate(surfaces)
+    !if (allocated(cells)) deallocate(cells)
+    !if (allocated(universes)) deallocate(universes)
+    !if (allocated(lattices)) deallocate(lattices)
+    !if (allocated(surfaces)) deallocate(surfaces)
     if (allocated(materials)) deallocate(materials)
     if (allocated(plots)) deallocate(plots)
     if (allocated(volume_calcs)) deallocate(volume_calcs)
@@ -535,10 +535,10 @@ contains
     if (allocated(track_identifiers)) deallocate(track_identifiers)
 
     ! Deallocate dictionaries
-    call cell_dict % clear()
-    call universe_dict % clear()
-    call lattice_dict % clear()
-    call surface_dict % clear()
+    !call cell_dict % clear()
+    !call universe_dict % clear()
+    !call lattice_dict % clear()
+    !call surface_dict % clear()
     call material_dict % clear()
     call mesh_dict % clear()
     call filter_dict % clear()

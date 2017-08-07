@@ -14,6 +14,8 @@ module initialize
   use error,           only: fatal_error, warning
   use geometry,        only: neighbor_lists, count_instance, calc_offsets, &
                              maximum_levels
+  use geometry_global, only: n_cells, cells, n_universes, universes, &
+                             n_lattices, lattice_dict
   use geometry_header, only: Cell, Universe, Lattice, RectLattice, HexLattice,&
                              root_universe
   use global

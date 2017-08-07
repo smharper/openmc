@@ -2,6 +2,7 @@ module geometry
 
   use constants
   use error,                  only: fatal_error, warning
+  use geometry_global
   use geometry_header,        only: Cell, Universe, Lattice, &
                                     &RectLattice, HexLattice
   use global

@@ -4,6 +4,7 @@ module summary
 
   use constants
   use endf,            only: reaction_name
+  use geometry_global
   use geometry_header, only: root_universe, Cell, Universe, Lattice, &
                              RectLattice, HexLattice
   use global

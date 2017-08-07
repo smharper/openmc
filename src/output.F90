@@ -7,6 +7,7 @@ module output
   use eigenvalue,      only: openmc_get_keff
   use endf,            only: reaction_name
   use error,           only: fatal_error, warning
+  use geometry_global, only: n_cells
   use geometry_header, only: Cell, Universe, Lattice, RectLattice, &
                              HexLattice
   use global

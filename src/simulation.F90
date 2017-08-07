@@ -10,6 +10,7 @@ module simulation
 #ifdef _OPENMP
   use eigenvalue,      only: join_bank_from_threads
 #endif
+  use geometry_global, only: n_cells
   use global
   use message_passing
   use output,          only: write_message, header, print_columns, &

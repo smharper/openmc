@@ -8,16 +8,17 @@ module volume_calc
 #endif
 
   use constants
-  use geometry,     only: find_cell
+  use geometry,        only: find_cell
+  use geometry_global
   use global
-  use hdf5_interface, only: file_create, file_close, write_attribute, &
-       create_group, close_group, write_dataset
-  use output,       only: write_message, header, time_stamp
+  use hdf5_interface,  only: file_create, file_close, write_attribute, &
+                             create_group, close_group, write_dataset
+  use output,          only: write_message, header, time_stamp
   use message_passing
   use particle_header, only: Particle
-  use random_lcg,   only: prn, prn_set_stream, set_particle_seed
-  use stl_vector,   only: VectorInt, VectorReal
-  use timer_header, only: Timer
+  use random_lcg,      only: prn, prn_set_stream, set_particle_seed
+  use stl_vector,      only: VectorInt, VectorReal
+  use timer_header,    only: Timer
   use volume_header
 
   implicit none

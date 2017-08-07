@@ -19,6 +19,7 @@ module state_point
   use eigenvalue,         only: openmc_get_keff
   use endf,               only: reaction_name
   use error,              only: fatal_error, warning
+  use geometry_global,    only: cells
   use global
   use hdf5_interface
   use mesh_header,        only: RegularMesh

@@ -7,6 +7,7 @@ module openmc_api
   use constants,       only: K_BOLTZMANN
   use eigenvalue,      only: k_sum, openmc_get_keff
   use geometry,        only: find_cell
+  use geometry_global, only: cells, cell_dict
   use geometry_header, only: root_universe
   use global
   use hdf5_interface

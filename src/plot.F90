@@ -7,6 +7,7 @@ module plot
   use constants
   use error,           only: fatal_error
   use geometry,        only: find_cell, check_cell_overlap
+  use geometry_global, only: cells
   use geometry_header, only: Cell, root_universe
   use global
   use hdf5_interface

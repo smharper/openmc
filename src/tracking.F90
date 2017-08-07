@@ -5,6 +5,7 @@ module tracking
   use error,              only: fatal_error, warning
   use geometry,           only: find_cell, distance_to_boundary, cross_surface, &
                                 cross_lattice, check_cell_overlap
+  use geometry_global,    only: cells
   use global
   use output,             only: write_message
   use message_passing

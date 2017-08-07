@@ -3,6 +3,7 @@ module mgxs_data
   use constants
   use algorithm,       only: find
   use error,           only: fatal_error
+  use geometry_global, only: cells
   use geometry_header, only: get_temperatures
   use global
   use hdf5_interface

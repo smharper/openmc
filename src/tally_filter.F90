@@ -3,6 +3,8 @@ module tally_filter
   use algorithm,           only: binary_search
   use constants,           only: ONE, NO_BIN_FOUND, FP_PRECISION, ERROR_REAL
   use dict_header,         only: DictIntInt
+  use geometry_global,     only: cells, universes, lattices, surfaces, &
+                                 cell_dict, universe_dict, surface_dict
   use geometry_header,     only: root_universe, RectLattice, HexLattice
   use global
   use hdf5_interface
