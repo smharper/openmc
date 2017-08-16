@@ -8,17 +8,16 @@ from xml.etree import ElementTree as ET
 
 from six import add_metaclass
 import numpy as np
+import pandas as pd
 
 import openmc
 import openmc.checkvalue as cv
+from .mixin import IDManagerMixin
 
-
-# "Static" variable for auto-generated Filter IDs
-AUTO_FILTER_ID = 10000
 
 _FILTER_TYPES = ['universe', 'material', 'cell', 'cellborn', 'surface',
                  'mesh', 'energy', 'energyout', 'mu', 'polar', 'azimuthal',
-                 'distribcell', 'delayedgroup', 'energyfunction']
+                 'distribcell', 'delayedgroup', 'energyfunction', 'cellfrom']
 
 _CURRENT_NAMES = {1:  'x-min out', 2:  'x-min in',
                   3:  'x-max out', 4:  'x-max in',
@@ -26,12 +25,6 @@ _CURRENT_NAMES = {1:  'x-min out', 2:  'x-min in',
                   7:  'y-max out', 8:  'y-max in',
                   9:  'z-min out', 10: 'z-min in',
                   11: 'z-max out', 12: 'z-max in'}
-
-
-def reset_auto_filter_id():
-    """Reset counter for auto-generated filter IDs."""
-    global AUTO_FILTER_ID
-    AUTO_FILTER_ID = 10000
 
 
 class FilterMeta(ABCMeta):
@@ -73,7 +66,7 @@ class FilterMeta(ABCMeta):
 
 
 @add_metaclass(FilterMeta)
-class Filter(object):
+class Filter(IDManagerMixin):
     """Tally modifier that describes phase-space and other characteristics.
 
     Parameters
@@ -98,6 +91,9 @@ class Filter(object):
         filter's bins.
 
     """
+
+    next_id = 1
+    used_ids = set()
 
     def __init__(self, bins, filter_id=None):
         self.bins = bins
@@ -195,10 +191,6 @@ class Filter(object):
         return self._bins
 
     @property
-    def id(self):
-        return self._id
-
-    @property
     def num_bins(self):
         return self._num_bins
 
@@ -215,17 +207,6 @@ class Filter(object):
         self.check_bins(bins)
 
         self._bins = bins
-
-    @id.setter
-    def id(self, filter_id):
-        if filter_id is None:
-            global AUTO_FILTER_ID
-            self._id = AUTO_FILTER_ID
-            AUTO_FILTER_ID += 1
-        else:
-            cv.check_type('filter ID', filter_id, Integral)
-            cv.check_greater_than('filter ID', filter_id, 0, equality=True)
-            self._id = filter_id
 
     @num_bins.setter
     def num_bins(self, num_bins):
@@ -460,9 +441,7 @@ class Filter(object):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         filter_bins = np.repeat(self.bins, self.stride)
@@ -597,7 +576,40 @@ class CellFilter(WithIDFilter):
     @property
     def bins(self):
         return self._bins
+      
+    @bins.setter
+    def bins(self, bins):
+        self._smart_set_bins(bins, openmc.Cell)
 
+
+class CellFromFilter(WithIDFilter):
+    """Bins tally on which Cell the neutron came from.
+
+    Parameters
+    ----------
+    bins : openmc.Cell, Integral, or iterable thereof
+        The Cell(s) to tally. Either openmc.Cell objects or their
+        Integral ID numbers can be used.
+    filter_id : int
+        Unique identifier for the filter
+
+    Attributes
+    ----------
+    bins : Integral or Iterable of Integral
+        openmc.Cell IDs.
+    id : int
+        Unique identifier for the filter
+    num_bins : Integral
+        The number of filter bins
+    stride : Integral
+        The number of filter, nuclide and score bins within each of this
+        filter's bins.
+
+    """
+    @property
+    def bins(self):
+        return self._bins
+      
     @bins.setter
     def bins(self, bins):
         self._smart_set_bins(bins, openmc.Cell)
@@ -715,9 +727,7 @@ class SurfaceFilter(Filter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         filter_bins = np.repeat(self.bins, self.stride)
@@ -875,9 +885,7 @@ class MeshFilter(Filter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         # Initialize dictionary to build Pandas Multi-index column
@@ -1123,9 +1131,7 @@ class EnergyFilter(RealFilter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         # Extract the lower and upper energy bounds, then repeat and tile
@@ -1335,9 +1341,7 @@ class DistribcellFilter(Filter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         level_df = None
@@ -1531,9 +1535,7 @@ class MuFilter(RealFilter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         # Extract the lower and upper energy bounds, then repeat and tile
@@ -1638,9 +1640,7 @@ class PolarFilter(RealFilter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         # Extract the lower and upper angle bounds, then repeat and tile
@@ -1745,9 +1745,7 @@ class AzimuthalFilter(RealFilter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
         # Initialize Pandas DataFrame
-        import pandas as pd
         df = pd.DataFrame()
 
         # Extract the lower and upper angle bounds, then repeat and tile
@@ -2039,8 +2037,6 @@ class EnergyFunctionFilter(Filter):
         Tally.get_pandas_dataframe(), CrossFilter.get_pandas_dataframe()
 
         """
-
-        import pandas as pd
         df = pd.DataFrame()
 
         # There is no clean way of sticking all the energy, y data into a
