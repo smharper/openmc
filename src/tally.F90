@@ -4,7 +4,7 @@ module tally
 
   use algorithm,        only: binary_search
   use constants
-  use cross_section,    only: multipole_deriv_eval
+  use cross_section,    only: multipole_deriv_eval, multipole_eval
   use error,            only: fatal_error
   use geometry_header
   use global
@@ -4223,7 +4223,7 @@ contains
 ! 4. Analog- and collision-estimated tallies are scored.
 ! 5. This subroutine is called.
 ! 6. Particle is killed and no more tallies are scored.
-! Hence, it is safe to assume that only derivatives of the scattering cross
+! Hence, it is safe to assume that only derivative of the scattering cross
 ! section need to be computed here.
 !===============================================================================
 
@@ -4231,8 +4231,11 @@ contains
     type(Particle), intent(in) :: p
 
     integer :: i, j, l
-    real(8) :: dsigT, dsigA, dsigF
-    real(8) :: kT
+    !real(8) :: dsigT, dsigA, dsigF
+    real(8) :: beta, G, E_star, a_hat, E0, b, c, x_c_sq, x_c, Er_min, Er_max, &
+               dE, Er, P0, P1, P2, sigT, sigA, sigF, eta_hat, integrand, T
+    real(8), parameter :: X_EXP = 14
+    integer :: i_Er
 
     ! A void material cannot be perturbed so it will not affect flux derivatives
     if (p % material == MATERIAL_VOID) return
@@ -4282,22 +4285,14 @@ contains
                        nuc % mp_present .and. &
                        p % last_E >= nuc % multipole % start_E .and. &
                        p % last_E <= nuc % multipole % end_E) then
-                    if (p % event_MT == ELASTIC .and. deriv % test_maxwell) then
-                      kT = p % sqrtkT * p % sqrtkT
-                      deriv % flux_deriv = deriv % flux_deriv &
-                           + (-THREE * kT + TWO * p % target_v2 * nuc % awr) &
-                           / (TWO * kT * kT / K_BOLTZMANN)
-                      !write(*, *) kT, p % target_v2 * nuc % awr
-                    else if (p % event_MT == ELASTIC) then
-                      ! phi is proportional to Sigma_s
-                      ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-                      ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
-                      call multipole_deriv_eval(nuc % multipole, p % last_E, &
-                           p % sqrtkT, dsigT, dsigA, dsigF)
-                      deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
-                           / (micro_xs(mat % nuclide(l)) % total &
-                           - micro_xs(mat % nuclide(l)) % absorption)
-                    end if
+                    ! phi is proportional to Sigma_s
+                    ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
+                    ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
+                    !call multipole_deriv_eval(nuc % multipole, p % last_E, &
+                    !     p % sqrtkT, dsigT, dsigA, dsigF)
+                    !deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
+                    !     / (micro_xs(mat % nuclide(l)) % total &
+                    !     - micro_xs(mat % nuclide(l)) % absorption)
                     ! Note that this is an approximation!  The real scattering
                     ! cross section is Sigma_s(E'->E, uvw'->uvw) =
                     ! Sigma_s(E') * P(E'->E, uvw'->uvw).  We are assuming that
@@ -4305,6 +4300,54 @@ contains
                     ! d_S(E') / d_T.  Using this approximation in the vicinity
                     ! of low-energy resonances causes errors (~2-5% for PWR
                     ! pincell eigenvalue derivatives).
+                    beta = (ONE + nuc % awr) / nuc % awr
+                    G = ((sqrt(beta) / p % sqrtkT)**3 * nuc % awr &
+                         * sqrt(nuc % awr + 1) * HALF / SQRT_PI &
+                         / sqrt(p % last_E + p % E &
+                                - TWO * sqrt(p % last_E * p % E) * p % mu) &
+                         * sqrt(p % E / p % last_E))
+                    E_star = (beta * HALF)**2 * (p % last_E + p % E &
+                         - TWO * sqrt(p % last_E * p % E) * p % mu)
+                    a_hat = nuc % awr / (p % sqrtkT)**2
+                    E0 = p % last_E / nuc % awr &
+                         - beta * sqrt(p % last_E * p % E) * p % mu
+
+                    if (E_star /= ZERO) then
+                      b = beta * HALF * sqrt(a_hat * p % last_E * p % E &
+                                             * (ONE - p % mu**2) / E_star)
+                      c = a_hat * (E0 - E_star)
+                      x_c_sq = c + b**2 + X_EXP
+                      if (x_c_sq <= ZERO) cycle
+                      x_c = sqrt(x_c_sq)
+
+                      Er_min = E_star + (b - x_c)**2 / a_hat
+                      if (Er_min < E_star) Er_min = E_star
+                      Er_max = E_star + (b + x_c)**2 / a_hat
+                      dE = (Er_max - Er_min) / 19.0_8
+
+                      Er = Er_min + HALF * dE
+                      P0 = ZERO
+                      P1 = ZERO
+                      P2 = ZERO
+                      do i_Er = 1, 20
+                        call multipole_eval(nuc % multipole, p % last_E, &
+                             ZERO, sigT, sigA, sigF)
+                        eta_hat = ((nuc % awr + ONE) / p % sqrtkT**2 &
+                             * sqrt(p % last_E * p % E * (ONE - p % mu**2)) &
+                             * sqrt(Er / E_star - ONE))
+                        integrand = exp(-a_hat * (Er - E0) + eta_hat) * HALF &
+                             / sqrt(TWO * PI * eta_hat) * (sigT - sigA) * dE
+                        P0 = P0 + integrand
+                        P1 = P1 + integrand * eta_hat
+                        P2 = P2 + integrand * a_hat * (Er - E0)
+                        Er = Er + dE
+                      end do
+                      T = p % sqrtkT**2 / K_BOLTZMANN
+                      !deriv % flux_deriv = deriv % flux_deriv &
+                      !     - (ONE + P1 / P0) / T
+                      deriv % flux_deriv = deriv % flux_deriv &
+                           + (-ONE - P1 / P0 + P2 / P0) / T
+                    end if
                   end if
                 end associate
               end do
