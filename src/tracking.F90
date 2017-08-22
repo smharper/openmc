@@ -42,6 +42,8 @@ contains
     real(8) :: distance               ! distance particle travels
     logical :: found_cell             ! found cell which particle is in?
 
+    logical :: is_first_loop
+
     ! Display message if high verbosity or trace is on
     if (verbosity >= 9 .or. trace) then
       call write_message("Simulating Particle " // trim(to_str(p % id)))
@@ -67,6 +69,8 @@ contains
     ! Every particle starts with no accumulated flux derivative.
     if (active_tallies % size() > 0) call zero_flux_derivs()
 
+    is_first_loop = .true.
+
     EVENT_LOOP: do
       ! If the cell hasn't been determined based on the particle's location,
       ! initiate a search for the current cell. This generally happens at the
@@ -79,6 +83,11 @@ contains
 
         ! set birth cell attribute
         if (p % cell_born == NONE) p % cell_born = p % coord(p % n_coord) % cell
+      end if
+
+      if (is_first_loop) then
+        tally_derivs(1) % flux_deriv = materials(p % material) % source_deriv
+        is_first_loop = .false.
       end if
 
       ! Write particle track.

@@ -95,6 +95,7 @@ class Material(IDManagerMixin):
         self._num_instances = None
         self._volume = None
         self._atoms = {}
+        self.source_deriv = None
 
         # A list of tuples (nuclide, percent, percent type)
         self._nuclides = []
@@ -984,6 +985,11 @@ class Material(IDManagerMixin):
                 subelement.set("name", sab[0])
                 if sab[1] != 1.0:
                     subelement.set("fraction", str(sab[1]))
+
+        if self.source_deriv is not None:
+            element.set("source_deriv", str(self.source_deriv))
+            #subelement = ET.SubElement(element, "source_deriv")
+            #subelement.set("value", str(self.source_deriv))
 
         return element
 

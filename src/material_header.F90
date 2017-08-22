@@ -46,6 +46,8 @@ module material_header
     ! enforce isotropic scattering in lab
     logical, allocatable :: p0(:)
 
+    real(8) :: source_deriv
+
   contains
     procedure :: set_density => material_set_density
     procedure :: assign_sab_tables => material_assign_sab_tables

@@ -2360,6 +2360,12 @@ contains
              &nuclides.")
       end if
 
+      if (check_for_node(node_mat, "source_deriv")) then
+        call get_node_value(node_mat, "source_deriv", mat % source_deriv)
+      else
+        mat % source_deriv = ZERO
+      end if
+
       ! =======================================================================
       ! READ AND PARSE <nuclide> TAGS
 
