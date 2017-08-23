@@ -4316,7 +4316,7 @@ contains
                         P1 = ZERO
                         P2 = ZERO
                         do i_Er = 1, 20
-                          call multipole_eval(nuc % multipole, p % last_E, &
+                          call multipole_eval(nuc % multipole, Er, &
                                ZERO, sigT, sigA, sigF)
                           eta_hat = ((nuc % awr + ONE) / p % sqrtkT**2 &
                                * sqrt(p % last_E * p % E * (ONE - p % mu**2)) &
@@ -4329,8 +4329,6 @@ contains
                           Er = Er + dE
                         end do
                         T = p % sqrtkT**2 / K_BOLTZMANN
-                        !deriv % flux_deriv = deriv % flux_deriv &
-                        !     - (ONE + P1 / P0) / T
                         deriv % flux_deriv = deriv % flux_deriv &
                              + (-ONE - P1 / P0 + P2 / P0) / T
                       end if
