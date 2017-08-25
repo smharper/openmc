@@ -4316,6 +4316,7 @@ contains
                         P1 = ZERO
                         P2 = ZERO
                         do i_Er = 1, 20
+                          if (Er > nuc % multipole % end_E) exit
                           call multipole_eval(nuc % multipole, Er, &
                                ZERO, sigT, sigA, sigF)
                           eta_hat = ((nuc % awr + ONE) / p % sqrtkT**2 &
