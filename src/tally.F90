@@ -4329,9 +4329,11 @@ contains
                           P2 = P2 + integrand * a_hat * (Er - E0)
                           Er = Er + dE
                         end do
-                        T = p % sqrtkT**2 / K_BOLTZMANN
-                        deriv % flux_deriv = deriv % flux_deriv &
-                             + (-ONE - P1 / P0 + P2 / P0) / T
+                        if (P0 /= ZERO) then
+                          T = p % sqrtkT**2 / K_BOLTZMANN
+                          deriv % flux_deriv = deriv % flux_deriv &
+                               + (-ONE - P1 / P0 + P2 / P0) / T
+                        end if
                       end if
                     else
                       call multipole_deriv_eval(nuc % multipole, p % last_E, &
