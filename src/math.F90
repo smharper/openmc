@@ -827,4 +827,166 @@ contains
     end do
   end subroutine broaden_wmp_polynomials
 
+!===============================================================================
+! BESSEL_I0_EXP Evaluates I_0(x) * exp(-x) for a real x >= 0 where I_0(x) is the
+! modified Bessel function.  To compute the Bessel function, this code uses a
+! power series expansion for small x and an asymptotic expansion for large x.
+! The target accuracy is 10^-6 and the results have been checked against
+! scipy.special.ive for x < 10^9.  This function may fail silently for answers
+! which require many terms in the series.  "DLMF" in the comments refers to
+! NIST Digital Library of Mathematical Functions. http://dlmf.nist.gov/,
+! Release 1.0.16 of 2017-09-18. F. W. J. Olver, A. B. Olde Daalhuis,
+! D. W. Lozier, B. I. Schneider, R. F. Boisvert, C. W. Clark, B. R. Miller, and
+! B. V. Saunders, eds.
+!===============================================================================
+
+  function bessel_I0_exp(x) result(val)
+    real(8), intent(in) :: x
+    real(8)             :: val
+
+    real(8), parameter :: TOL = 1e-6_8
+    integer, parameter :: MAX_N_TERMS = 20
+
+    real(8) :: numerator
+    real(8) :: denominator
+    real(8) :: a
+    real(8) :: delta
+    logical :: done
+    integer :: k
+
+    if (x == ZERO) then
+      val = ONE
+
+    !===========================================================================
+    ! If x < 10, compute I0(x) via power series, then multiply by the system
+    ! value of exp(-x).  The power series expression of I_nu(z) is given in DLMF
+    ! 10.25.2 as
+    ! I_nu(z) = (z/2)^nu * sum_{k=0}^inf (z^2 / 4)^k / (k! * Gamma(nu+k+1))
+    ! In our case, nu = 0 which simplifies the expression to
+    ! I_0(z) = sum_{k=0}^inf (z^2 / 4)^k / (k!)^2
+    else if (x < 10.0_8) then
+      val = ONE
+      numerator = ONE
+      denominator = ONE
+      do k = 1, MAX_N_TERMS
+        numerator = numerator * x * x / FOUR  ! = (2^-2 * x^2)^k
+        denominator = denominator * k * k  ! = (k!)^2
+        delta = numerator / denominator  ! = term in summation
+        done = abs(delta / val) < TOL  ! Check for convergence
+        val = val + delta  ! Add this term to the output
+        if (done) exit  ! Terminate the do-loop if converged
+      end do
+      val = val * exp(-x)  ! Scale by the exponential and return
+
+    !===========================================================================
+    ! If x < 10, compute I0(x) via asymptotic expansion with the exp(-x) factor
+    ! included analytically.  The asymptotic expansion of I_nu(z) (Hankel's
+    ! expansion) is given in DLMF 10.40.1 and 10.17.1 as
+    ! I_nu(z) ~ e^z / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(nu) / z^k
+    ! where
+    ! a_k(nu) = (4*nu^2 - 1^2) * (4*nu^2 - 3^2) * ... * (4*nu^2 - (2k-1)^2)
+    !           / (k! 8^k)
+    ! a_0(nu) = 1
+    ! In our case with nu = 0,
+    ! a_k(0) = (-1^2) * (-3^2) * ... * (-(2k-1)^2) / (k! 8^k)
+    ! a_k(0) = (-1)^k * 1^2 * 3^2 * ... * (2k-1)^2 / (k! 8^k)
+    ! We also multiply by e^-z to get
+    ! I_0(z) e^-z ~ 1 / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(0) / z^k
+    ! (Note that the (-1)^k in a_k(0) and I_0 cancel out.)
+    else
+      val = ONE
+      a = ONE
+      denominator = ONE
+      do k = 1, MAX_N_TERMS
+        a = a * (TWO * k - ONE) * (TWO * k - ONE) / (k * 8.0_8)  ! = a_k(0)
+        denominator = denominator * x  ! = z^k
+        delta = a / denominator  ! = term in summation
+        done = abs(delta / val) < TOL  ! Check for convergence
+        val = val + delta  ! Add this term to the output
+        if (done) exit  ! Terminate the do-loop if converged
+      end do
+      val = val / sqrt(TWO * PI * x)  ! Add leading factor and return
+    end if
+  end function bessel_I0_exp
+
+!===============================================================================
+! BESSEL_I1_EXP Evaluates I_1(x) * exp(-x) for a real x >= 0 where I_1(x) is the
+! modified Bessel function.  To compute the Bessel function, this code uses a
+! power series expansion for small x and an asymptotic expansion for large x.
+! The target accuracy is 10^-6 and the results have been checked against
+! scipy.special.ive for x < 10^9.  This function may fail silently for answers
+! which require many terms in the series.  "DLMF" in the comments refers to
+! NIST Digital Library of Mathematical Functions. http://dlmf.nist.gov/,
+! Release 1.0.16 of 2017-09-18. F. W. J. Olver, A. B. Olde Daalhuis,
+! D. W. Lozier, B. I. Schneider, R. F. Boisvert, C. W. Clark, B. R. Miller, and
+! B. V. Saunders, eds.
+!===============================================================================
+
+  function bessel_I1_exp(x) result(val)
+    real(8), intent(in) :: x
+    real(8)             :: val
+
+    real(8), parameter :: TOL = 1e-6_8
+    integer, parameter :: MAX_N_TERMS = 20
+
+    real(8) :: numerator
+    real(8) :: denominator
+    real(8) :: a
+    real(8) :: sign_
+    real(8) :: delta
+    logical :: done
+    integer :: k
+
+    if (x == ZERO) then
+      val = ZERO
+
+    !===========================================================================
+    ! If x < 10, compute I1(x) via power series, then multiply by the system
+    ! value of exp(-x).  The power series expression of I_nu(z) is given in DLMF
+    ! 10.25.2 as
+    ! I_nu(z) = (z/2)^nu * sum_{k=0}^inf (z^2 / 4)^k / (k! * Gamma(nu+k+1))
+    ! In our case, nu = 1 which simplifies the expression to
+    ! I_1(z) = sum_{k=0}^inf (z^2 / 4)^k / (k! * (1+k)!)
+    else if (x < 10.0_8) then
+      val = ONE
+      numerator = ONE
+      denominator = ONE
+      do k = 1, MAX_N_TERMS
+        numerator = numerator * x * x / FOUR  ! = (2^-2 * x^2)^k
+        denominator = denominator * k * (1 + k)  ! = k! * (1+k)!
+        delta = numerator / denominator  ! = term in summation
+        done = abs(delta / val) < TOL  ! Check for convergence
+        val = val + delta  ! Add this term to the output
+        if (done) exit  ! Terminate the do-loop if converged
+      end do
+      val = val * x / TWO * exp(-x)  ! Add leading factor and return
+
+    !===========================================================================
+    ! If x < 10, compute I1(x) via asymptotic expansion with the exp(-x) factor
+    ! included analytically.  The asymptotic expansion of I_nu(z) (Hankel's
+    ! expansion) is given in DLMF 10.40.1 and 10.17.1 as
+    ! I_nu(z) ~ e^z / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(nu) / z^k
+    ! where
+    ! a_k(nu) = (4*nu^2 - 1^2) * (4*nu^2 - 3^2) * ... * (4*nu^2 - (2k-1)^2)
+    !           / (k! 8^k)
+    ! a_0(nu) = 1
+    else
+      val = ONE
+      a = ONE
+      sign_ = ONE
+      denominator = ONE
+      do k = 1, MAX_N_TERMS
+        sign_ = -sign_
+        a = a * (FOUR - (TWO * k - ONE) * (TWO * k - ONE)) &
+             / (k * 8.0_8)  ! = a_k(1)
+        denominator = denominator * x  ! = z^k
+        delta = sign_ * a / denominator  ! = term in summation
+        done = abs(delta / val) < TOL  ! Check for convergence
+        val = val + delta  ! Add this term to the output
+        if (done) exit  ! Terminate the do-loop if converged
+      end do
+      val = val / sqrt(TWO * PI * x)  ! Add leading factor and return
+    end if
+  end function bessel_I1_exp
+
 end module math

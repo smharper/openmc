@@ -8,7 +8,8 @@ module tally
   use error,            only: fatal_error
   use geometry_header
   use global
-  use math,             only: t_percentile, calc_pn, calc_rn
+  use math,             only: t_percentile, calc_pn, calc_rn, bessel_I0_exp, &
+                              bessel_I1_exp
   use mesh,             only: get_mesh_bin, bin_to_mesh_indices, &
                               get_mesh_indices, mesh_indices_to_bin, &
                               mesh_intersects_1d, mesh_intersects_2d, &
@@ -4287,11 +4288,11 @@ contains
                        p % last_E <= nuc % multipole % end_E) then
                     if (deriv % test_maxwell) then
                       beta = (ONE + nuc % awr) / nuc % awr
-                      G = ((sqrt(beta) / p % sqrtkT)**3 * nuc % awr &
-                           * sqrt(nuc % awr + 1) * HALF / SQRT_PI &
-                           / sqrt(p % last_E + p % E &
-                                  - TWO * sqrt(p % last_E * p % E) * p % mu) &
-                           * sqrt(p % E / p % last_E))
+                      !G = ((sqrt(beta) / p % sqrtkT)**3 * nuc % awr &
+                      !     * sqrt(nuc % awr + 1) * HALF / SQRT_PI &
+                      !     / sqrt(p % last_E + p % E &
+                      !            - TWO * sqrt(p % last_E * p % E) * p % mu) &
+                      !     * sqrt(p % E / p % last_E))
                       E_star = (beta * HALF)**2 * (p % last_E + p % E &
                            - TWO * sqrt(p % last_E * p % E) * p % mu)
                       a_hat = nuc % awr / (p % sqrtkT)**2
@@ -4322,17 +4323,19 @@ contains
                           eta_hat = ((nuc % awr + ONE) / p % sqrtkT**2 &
                                * sqrt(p % last_E * p % E * (ONE - p % mu**2)) &
                                * sqrt(Er / E_star - ONE))
-                          integrand = exp(-a_hat * (Er - E0) + eta_hat) * HALF &
-                               / sqrt(TWO * PI * eta_hat) * (sigT - sigA) * dE
+                          integrand = exp(-a_hat * (Er - E0) + eta_hat) &
+                               * (sigT - sigA) * HALF * bessel_I0_exp(eta_hat) &
+                               * dE
                           P0 = P0 + integrand
-                          P1 = P1 + integrand * eta_hat
-                          P2 = P2 + integrand * a_hat * (Er - E0)
+                          P1 = P1 + integrand * a_hat * (Er - E0)
+                          P2 = P2 + integrand * eta_hat &
+                               * bessel_I1_exp(eta_hat) / bessel_I0_exp(eta_hat)
                           Er = Er + dE
                         end do
                         if (P0 /= ZERO) then
                           T = p % sqrtkT**2 / K_BOLTZMANN
                           deriv % flux_deriv = deriv % flux_deriv &
-                               + (-ONE - P1 / P0 + P2 / P0) / T
+                               + (P1 / P0 - THREE / TWO - P2 / P0) / T
                         end if
                       end if
                     else
