@@ -22,6 +22,7 @@ module tally_derivative_header
     integer :: diff_material
     integer :: diff_nuclide
     real(8) :: flux_deriv
+    logical :: test_maxwell
   contains
     procedure :: from_xml
   end type TallyDerivative
@@ -88,6 +89,7 @@ contains
     end select
 
     call get_node_value(node, "material", this % diff_material)
+    call get_node_value(node, "test_maxwell", this % test_maxwell)
 
   end subroutine from_xml
 

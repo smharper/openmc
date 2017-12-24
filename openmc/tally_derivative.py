@@ -50,6 +50,7 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         self.variable = variable
         self.material = material
         self.nuclide = nuclide
+        self.test_maxwell = False
 
     def __repr__(self):
         string = 'Tally Derivative\n'
@@ -114,4 +115,5 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         element.set("material", str(self.material))
         if self.variable == 'nuclide_density':
             element.set("nuclide", self.nuclide)
+        element.set("test_maxwell", str(self.test_maxwell))
         return element

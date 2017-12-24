@@ -4,7 +4,7 @@ module tally
 
   use algorithm,        only: binary_search
   use constants
-  use cross_section,    only: multipole_deriv_eval
+  use cross_section,    only: multipole_eval, multipole_deriv_eval
   use dict_header,      only: EMPTY
   use error,            only: fatal_error
   use geometry_header
@@ -4143,6 +4143,7 @@ contains
 
     integer :: i, j, l
     real(8) :: dsigT, dsigA, dsigF
+    real(8) :: kern_hi, kern_lo, kern_mid
 
     ! A void material cannot be perturbed so it will not affect flux derivatives
     if (p % material == MATERIAL_VOID) return
@@ -4186,36 +4187,148 @@ contains
         case (DIFF_TEMPERATURE)
           associate (mat => materials(p % material))
             if (mat % id == deriv % diff_material) then
-              do l=1, mat % n_nuclides
-                associate (nuc => nuclides(mat % nuclide(l)))
-                  if (mat % nuclide(l) == p % event_nuclide .and. &
-                       nuc % mp_present .and. &
-                       p % last_E >= nuc % multipole % start_E .and. &
-                       p % last_E <= nuc % multipole % end_E) then
-                    ! phi is proportional to Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
-                    call multipole_deriv_eval(nuc % multipole, p % last_E, &
-                         p % sqrtkT, dsigT, dsigA, dsigF)
-                    deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
-                         / (micro_xs(mat % nuclide(l)) % total &
-                         - micro_xs(mat % nuclide(l)) % absorption)
-                    ! Note that this is an approximation!  The real scattering
-                    ! cross section is Sigma_s(E'->E, uvw'->uvw) =
-                    ! Sigma_s(E') * P(E'->E, uvw'->uvw).  We are assuming that
-                    ! d_P(E'->E, uvw'->uvw) / d_T = 0 and only computing
-                    ! d_S(E') / d_T.  Using this approximation in the vicinity
-                    ! of low-energy resonances causes errors (~2-5% for PWR
-                    ! pincell eigenvalue derivatives).
-                  end if
-                end associate
-              end do
+              if (deriv % test_maxwell .and. p % E > 1.0_8 &
+                   .and. p % E < 100.0_8) then
+                kern_mid = eval_scat_kern(p, .true.)
+                if (kern_mid > FP_PRECISION) then
+                  kern_hi = eval_scat_kern(p, .true., 5.0_8)
+                  kern_lo = eval_scat_kern(p, .true., -5.0_8)
+                  deriv % flux_deriv = deriv % flux_deriv &
+                       + (kern_hi - kern_lo) / (10.0_8 * kern_mid)
+                end if
+              else
+                do l=1, mat % n_nuclides
+                  associate (nuc => nuclides(mat % nuclide(l)))
+                    if (mat % nuclide(l) == p % event_nuclide .and. &
+                         nuc % mp_present .and. &
+                         p % last_E >= nuc % multipole % start_E .and. &
+                         p % last_E <= nuc % multipole % end_E) then
+                      ! phi is proportional to Sigma_s
+                      ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
+                      ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
+                      call multipole_deriv_eval(nuc % multipole, p % last_E, &
+                           p % sqrtkT, dsigT, dsigA, dsigF)
+                      deriv % flux_deriv = deriv % flux_deriv + (dsigT - dsigA)&
+                           / (micro_xs(mat % nuclide(l)) % total &
+                           - micro_xs(mat % nuclide(l)) % absorption)
+                      ! Note that this is an approximation!  The real scattering
+                      ! cross section is Sigma_s(E'->E, uvw'->uvw) =
+                      ! Sigma_s(E') * P(E'->E, uvw'->uvw).  We are assuming that
+                      ! d_P(E'->E, uvw'->uvw) / d_T = 0 and only computing
+                      ! d_S(E') / d_T.  Using this approximation in the vicinity
+                      ! of low-energy resonances causes errors (~2-5% for PWR
+                      ! pincell eigenvalue derivatives).
+                    end if
+                  end associate
+                end do
+              end if
             end if
           end associate
         end select
       end associate
     end do
   end subroutine score_collision_derivative
+
+!===============================================================================
+! EVAL_SCAT_KERN
+!===============================================================================
+
+  function eval_scat_kern(p, all_nuclides, delta_T) result(prob)
+    !use constants
+    !use cross_section,   only: multipole_eval
+    !use material_header, only: materials
+    !use nuclide_header,  only: nuclides
+    !use particle_header, only: Particle
+    use math,            only: bessel_I0_exp, bessel_I1_exp
+
+    !implicit none
+
+    type(Particle),    intent(in) :: p
+    logical,           intent(in) :: all_nuclides
+    real(8), optional, intent(in) :: delta_T
+    real(8)                       :: prob
+
+    integer :: l
+    real(8) :: beta, E_star, H, a_hat, E0, b, c, x_c_sq, x_c, Er_min, Er_max, &
+               dE, Er, eta_hat, nuc_prob, sigT, sigA, sigF, integrand, sqrt_kT
+    real(8) :: x_quad
+    real(8), parameter :: X_EXP = 30
+    integer, parameter :: n_Er = 200
+    integer :: i_Er
+
+    x_quad = sqrt(ONE / THREE)
+    if (present(delta_T)) then
+      sqrt_kt = sqrt((p % sqrtkT)**2 + K_BOLTZMANN * delta_T)
+    else
+      sqrt_kt = p % sqrtkT
+    end if
+
+    prob = ZERO
+    associate (mat => materials(p % material))
+      do l=1, mat % n_nuclides
+        associate (nuc => nuclides(mat % nuclide(l)))
+          !if ((all_nuclides .or. mat % nuclide(l) == p % event_nuclide)) then
+          if ((all_nuclides .or. mat % nuclide(l) == p % event_nuclide) &
+               .and. nuc % mp_present .and. &
+               p % last_E >= nuc % multipole % start_E .and. &
+               p % last_E <= nuc % multipole % end_E) then
+            beta = (ONE + nuc % awr) / nuc % awr
+            E_star = (beta * HALF)**2 * (p % last_E + p % E &
+                 - TWO * sqrt(p % last_E * p % E) * p % mu)
+            H = ((ONE + nuc % awr) / (sqrt(nuc % awr) * sqrt_kt))**3 &
+                 / (FOUR * SQRT_PI) * sqrt(p % E / (p % last_E * E_star)) &
+                 * mat % atom_density(l)
+            a_hat = nuc % awr / (sqrt_kt)**2
+            E0 = p % last_E / nuc % awr &
+                 - beta * sqrt(p % last_E * p % E) * p % mu
+
+            if (E_star /= ZERO) then
+              b = beta * HALF * sqrt(a_hat * p % last_E * p % E &
+                                     * (ONE - p % mu**2) / E_star)
+              c = a_hat * (E0 - E_star)
+              x_c_sq = c + b**2 + X_EXP
+              if (x_c_sq <= ZERO) cycle
+              x_c = sqrt(x_c_sq)
+
+              Er_min = E_star + (b - x_c)**2 / a_hat
+              if (Er_min < E_star) Er_min = E_star
+              if (Er_min < nuc % multipole % start_E) &
+                   Er_min = nuc % multipole % start_E
+              Er_max = E_star + (b + x_c)**2 / a_hat
+              if (Er_max > nuc % multipole % end_E) &
+                   Er_max = nuc % multipole % end_E
+              dE = (Er_max - Er_min) / n_Er
+
+              nuc_prob = ZERO
+              do i_Er = 1, n_Er-1
+                Er = Er_min + (i_Er - HALF) * dE - dE / TWO * x_quad
+                call multipole_eval(nuc % multipole, Er, &
+                     ZERO, sigT, sigA, sigF)
+                eta_hat = ((nuc % awr + ONE) / sqrt_kt**2 &
+                     * sqrt(p % last_E * p % E * (ONE - p % mu**2)) &
+                     * sqrt(Er / E_star - ONE))
+                integrand = exp(-a_hat * (Er - E0) + eta_hat) &
+                     * (sigT - sigA) &
+                     * HALF * bessel_I0_exp(eta_hat) * dE / TWO
+                nuc_prob = nuc_prob + integrand
+                Er = Er_min + (i_Er - HALF) * dE + dE / TWO * x_quad
+                call multipole_eval(nuc % multipole, Er, &
+                     ZERO, sigT, sigA, sigF)
+                eta_hat = ((nuc % awr + ONE) / sqrt_kt**2 &
+                     * sqrt(p % last_E * p % E * (ONE - p % mu**2)) &
+                     * sqrt(Er / E_star - ONE))
+                integrand = exp(-a_hat * (Er - E0) + eta_hat) &
+                     * (sigT - sigA) &
+                     * HALF * bessel_I0_exp(eta_hat) * dE / TWO
+                nuc_prob = nuc_prob + integrand
+              end do
+              prob = prob + H * nuc_prob
+            end if
+          end if
+        end associate
+      end do
+    end associate
+  end function eval_scat_kern
 
 !===============================================================================
 ! ZERO_FLUX_DERIVS Set the flux derivatives on differential tallies to zero.
