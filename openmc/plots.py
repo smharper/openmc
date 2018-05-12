@@ -1,6 +1,8 @@
 from collections.abc import Iterable, Mapping
+from colorsys import hsv_to_rgb
 from numbers import Real, Integral
 from xml.etree import ElementTree as ET
+import random
 import subprocess
 import sys
 import warnings
@@ -505,14 +507,14 @@ class Plot(IDManagerMixin):
         ----------
         geometry : openmc.Geometry
             The geometry for which the plot is defined
-        seed : Integral
-            The random number seed used to generate the color scheme
+        seed : hashable object or None
+            Hashable object which is used to seed the random number generator
+            used to select colors. If None, the generator is seeded from the
+            current time.
 
         """
 
         cv.check_type('geometry', geometry, openmc.Geometry)
-        cv.check_type('seed', seed, Integral)
-        cv.check_greater_than('seed', seed, 1, equality=True)
 
         # Get collections of the domains which will be plotted
         if self.color_by == 'material':
@@ -520,12 +522,11 @@ class Plot(IDManagerMixin):
         else:
             domains = geometry.get_all_cells().values()
 
-        # Set the seed for the random number generator
-        np.random.seed(seed)
-
         # Generate random colors for each feature
+        color_series = nice_color_gen(seed)
         for domain in domains:
-            self.colors[domain] = np.random.randint(0, 256, (3,))
+            self.colors[domain] = tuple(int(255*x)
+                                        for x in next(color_series)[:3])
 
     def highlight_domains(self, geometry, domains, seed=1,
                           alpha=0.5, background='gray'):
@@ -541,8 +542,10 @@ class Plot(IDManagerMixin):
             The geometry for which the plot is defined
         domains : Iterable of openmc.Cell or openmc.Material
             A collection of the domain IDs to highlight in the plot
-        seed : int
-            The random number seed used to generate the color scheme
+        seed : hashable object or None
+            Hashable object which is used to seed the random number generator
+            used to select colors. If None, the generator is seeded from the
+            current time.
         alpha : float
             The value between 0 and 1 to apply in alpha compisiting
         background : 3-tuple of int or str
@@ -821,3 +824,43 @@ class Plots(cv.CheckedList):
         # Write the XML Tree to the plots.xml file
         tree = ET.ElementTree(self._plots_file)
         tree.write(path, xml_declaration=True, encoding='utf-8', method="xml")
+
+
+def nice_color_gen(seed=None):
+    """Yield colors that are distinct, medium bright, and medium saturated.
+
+    This generator picks a random starting hue then yields an infinite stream
+    of colors with hues displaced by 1 / phi.
+
+    Parameters
+    ----------
+    seed : hashable object or None
+        Hashable object which is used to seed the random number generator. If
+        None, the generator is seeded from the current time.
+
+    Yields
+    ------
+    tuple of float
+        A 4-tuple indicating a color in RGBA space.
+
+    """
+    # High value colors are more distinct so value is set to 1.  Saturation
+    # should be high enough that colors are distinct, but a little desaturation
+    # makes the image less visaully jarring.
+    saturation = 0.7
+    value = 1.0
+    alpha = 1.0
+
+    # Color hues are spaced by a factor of 1 / phi to maximize the distances
+    # between an arbitrary number of colors.
+    phi = (1.0 + np.sqrt(5)) / 2.0
+    delta_hue = 1.0 / phi
+
+    # Randomly pick a starting hue.
+    if seed is not None: random.seed(seed)
+    hue = random.random()
+
+    # Yield colors as needed.
+    while True:
+        yield hsv_to_rgb(hue, saturation, value) + (alpha, )
+        hue = (hue + delta_hue) % 1.0

@@ -1,14 +1,13 @@
 from collections import OrderedDict, Iterable
 from copy import copy, deepcopy
 from numbers import Integral, Real
-import random
 import sys
 
 import numpy as np
 
 import openmc
 import openmc.checkvalue as cv
-from openmc.plots import _SVG_COLORS
+from openmc.plots import _SVG_COLORS, nice_color_gen
 from openmc.mixin import IDManagerMixin
 
 
@@ -231,9 +230,8 @@ class Universe(IDManagerMixin):
         """
         import matplotlib.pyplot as plt
 
-        # Seed the random number generator
-        if seed is not None:
-            random.seed(seed)
+        # Initialize the color generator
+        color_series = nice_color_gen(seed)
 
         if colors is None:
             # Create default dictionary if none supplied
@@ -300,8 +298,7 @@ class Universe(IDManagerMixin):
                     except AttributeError:
                         continue
                     if obj not in colors:
-                        colors[obj] = (random.random(), random.random(),
-                                       random.random(), 1.0)
+                        colors[obj] = next(color_series)
                     img[j, i, :] = colors[obj]
 
         # Display image
