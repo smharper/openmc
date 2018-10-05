@@ -17,6 +17,7 @@ module math
   public :: spline
   public :: spline_interpolate
   public :: spline_integrate
+  public :: ln_approx_1e10
 
   interface
 
@@ -104,6 +105,12 @@ module math
       real(C_DOUBLE),            value :: relerr
       complex(C_DOUBLE_COMPLEX)        :: w
     end function faddeeva_w
+
+    function ln_approx_1e10(x) result(y) bind(C)
+      import C_DOUBLE
+      real(C_DOUBLE), value :: x
+      real(C_DOUBLE)        :: y
+    end function ln_approx_1e10
   end interface
 
 contains

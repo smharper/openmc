@@ -817,4 +817,44 @@ double spline_integrate_c(int n, const double x[], const double y[],
   return s;
 }
 
+double
+ln_approx_1e10(double x)
+{
+  if (x < 0) return 0.0 / 0;
+  if (x < 1e-300) return -1.0 / 0;
+
+  // Find the binary significand and exponent; x = sig * 2^exp.
+  int exp;
+  double sig = std::frexp(x, &exp);
+
+  // sig currently lies in the range [0.5, 1.0) which means we aren't taking
+  // full advantage of the following continued fraction which is most accurate
+  // near 1.  Shift sig so that it lies in the range [1/sqrt(2), sqrt(2)).
+  if (sig < M_SQRT1_2) {
+    --exp;
+    sig *= 2;
+  }
+
+  // Make a change of variable ln(sig) = ln((1 + u) / (1 - u)).
+  double u = (sig - 1) / (sig + 1);
+
+  // Use a 5-term continued fraction to compute ln(sig).  Here the number of
+  // divisions was reduced by one via multiplying the penultimate fraction by
+  // the final denominator.  This continued fraction can be found as eqation
+  // (11.2.4) from Cuyt et al, "Handbook of Continued Fractions" (2008)
+  // ISBN: 978-1-4020-6948-2.
+  // COEFF[m] = -m^2 / ((2*m-1) * (2*m+1))
+  constexpr double COEFFS[4] = {-16./(7.*9.), -9./(5.*7.), -4./(3.*5.),
+                                -1./(1.*3.)};
+  double u_sq = u * u;
+  double out = (1.0 + COEFFS[0]*u_sq) * COEFFS[2] * u_sq
+    / (1.0 + (COEFFS[0] + COEFFS[1]) * u_sq);
+  out = COEFFS[3] * u_sq / (1.0 + out);
+  out = 2.0 * u / (1.0 + out);
+
+  // Compute the final answer including the exponent term of x via
+  // ln(x) = ln(sig * 2^exp) = ln(sig) + exp * ln(2).
+  return out + exp * M_LN2;
+}
+
 } // namespace openmc
