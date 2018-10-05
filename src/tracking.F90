@@ -8,6 +8,7 @@ module tracking
   use geometry,           only: find_cell, distance_to_boundary, cross_lattice,&
                                 check_cell_overlap
   use material_header,    only: materials, Material
+  use math,               only: ln_approx_1e10
   use message_passing
   use mgxs_interface
   use nuclide_header
@@ -146,7 +147,7 @@ contains
       else if (material_xs % total == ZERO) then
         d_collision = INFINITY
       else
-        d_collision = -log(prn()) / material_xs % total
+        d_collision = -ln_approx_1e10(prn()) / material_xs % total
       end if
 
       ! Select smaller of the two distances

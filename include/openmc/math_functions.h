@@ -227,5 +227,12 @@ extern "C" double spline_interpolate_c(int n, const double x[], const double y[]
 extern "C" double spline_integrate_c(int n, const double x[], const double y[],
                                      const double z[], double xa, double xb);
 
+//==============================================================================
+//! Approximate the natural log of a positive real number with a relative
+//! error < 1e-10.
+//==============================================================================
+
+extern "C" double ln_approx_1e10(double x);
+
 } // namespace openmc
 #endif // OPENMC_MATH_FUNCTIONS_H
