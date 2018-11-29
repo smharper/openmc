@@ -279,7 +279,10 @@ find_cell(Particle* p, bool use_neighbor_lists)
     // cells in this universe, and update the neighbor list if we find a new
     // neighboring cell.
     found = find_cell_inner(p, nullptr);
-    if (found) c.neighbors.push_back(p->coord[coord_lvl].cell);
+    if (found) {
+#pragma omp critical
+      c.neighbors.push_back(p->coord[coord_lvl].cell);
+    }
     return found;
 
   } else {
