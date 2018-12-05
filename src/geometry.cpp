@@ -1,7 +1,9 @@
 #include "openmc/geometry.h"
 
 #include <array>
+#include <chrono>
 #include <sstream>
+#include <thread> // For this_thread::sleep_for
 
 #include "openmc/cell.h"
 #include "openmc/constants.h"
@@ -10,7 +12,6 @@
 #include "openmc/settings.h"
 #include "openmc/simulation.h"
 #include "openmc/surface.h"
-
 
 namespace openmc {
 
@@ -63,11 +64,14 @@ check_cell_overlap(Particle* p)
 //==============================================================================
 
 bool
-find_cell_inner(Particle* p, const std::vector<int>* search_cells)
+find_cell_inner(Particle* p, NeighborList* neighbor_list)
 {
   // If a set of cells to search was not specified, search all cells in this
   // universe.
-  if (!search_cells) {
+  const std::vector<int>* search_cells;
+  if (neighbor_list) {
+    search_cells = &neighbor_list->data_;
+  } else {
     int i_universe = p->coord[p->n_coord-1].universe;
     search_cells = &model::universes[i_universe]->cells_;
   }
@@ -96,6 +100,11 @@ find_cell_inner(Particle* p, const std::vector<int>* search_cells)
       found = true;
       break;
     }
+  }
+
+  if (neighbor_list) {
+#pragma omp atomic
+    --neighbor_list->ref_count_;
   }
 
   if (found) {
@@ -269,10 +278,19 @@ find_cell(Particle* p, bool use_neighbor_lists)
     auto i_cell = p->coord[coord_lvl].cell;
     Cell& c {*model::cells[i_cell]};
 
+    auto lock_acquired = omp_test_lock(&c.neighbors.mutex_);
+    if (lock_acquired) {
+#pragma omp atomic
+      ++c.neighbors.ref_count_;
+      omp_unset_lock(&c.neighbors.mutex_);
+    } else {
+      // Search all cells in this universe for the particle.
+      return find_cell_inner(p, nullptr);
+    }
+
     // Search for the particle in that cell's neighbor list.  Return if we
     // found the particle.
-    std::vector<int>* search_cells = &c.neighbors;
-    bool found = find_cell_inner(p, search_cells);
+    bool found = find_cell_inner(p, &c.neighbors);
     if (found) return found;
 
     // The particle could not be found in the neighbor list.  Try searching all
@@ -280,8 +298,12 @@ find_cell(Particle* p, bool use_neighbor_lists)
     // neighboring cell.
     found = find_cell_inner(p, nullptr);
     if (found) {
-#pragma omp critical
-      c.neighbors.push_back(p->coord[coord_lvl].cell);
+      omp_set_lock(&c.neighbors.mutex_);
+      while(c.neighbors.ref_count_ > 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(100));
+      }
+      c.neighbors.data_.push_back(p->coord[coord_lvl].cell);
+      omp_unset_lock(&c.neighbors.mutex_);
     }
     return found;
 

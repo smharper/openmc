@@ -17,6 +17,9 @@
 #include "DagMC.hpp"
 #endif
 
+//TODO: does this need an ifdef?
+#include <omp.h>
+
 namespace openmc {
 
 //==============================================================================
@@ -70,6 +73,27 @@ public:
 };
 
 //==============================================================================
+//==============================================================================
+
+class NeighborList
+{
+public:
+  NeighborList()
+  {
+    omp_init_lock(&mutex_);
+  }
+
+  ~NeighborList()
+  {
+    omp_destroy_lock(&mutex_);
+  }
+
+  std::vector<int> data_;
+  int ref_count_ {0};
+  omp_lock_t mutex_;
+};
+
+//==============================================================================
 //! A geometry primitive that links surfaces, universes, and materials
 //==============================================================================
 
@@ -104,7 +128,7 @@ public:
   bool simple_;  //!< Does the region contain only intersections?
 
   //! \brief Neighboring cells in the same universe.
-  std::vector<int> neighbors;
+  NeighborList neighbors;
 
   Position translation_ {0, 0, 0}; //!< Translation vector for filled universe
 
