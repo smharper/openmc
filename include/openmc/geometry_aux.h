@@ -88,6 +88,11 @@ distribcell_path(int32_t target_cell, int32_t map, int32_t target_offset);
 
 extern "C" int maximum_levels(int32_t univ);
 
+//==============================================================================//! Handle any geometry-related work needed after a transport generation.
+//==============================================================================
+
+void geometry_finalize_generation();
+
 //==============================================================================
 //! Deallocates global vectors and maps for cells, universes, and lattices.
 //==============================================================================
