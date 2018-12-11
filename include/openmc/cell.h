@@ -77,16 +77,11 @@ public:
 //==============================================================================
 //==============================================================================
 
-template <typename T_value, typename T_vec_iter, typename T_list_iter>
-class NeighborListIter;
-
 class NeighborList
 {
 public:
-  using value_type = int;
-  using prefix_iter = std::vector<value_type>::iterator;
-  using suffix_iter = std::forward_list<value_type>::iterator;
-  using iterator = NeighborListIter<value_type, prefix_iter, suffix_iter>;
+  using value_type = int32_t;
+  using iterator = std::forward_list<value_type>::iterator;
 
   NeighborList()
   {
@@ -101,119 +96,27 @@ public:
   void push(int new_elem)
   {
     if (auto lock_acquired = omp_test_lock(&mutex_)) {
-      if (std::find(suffix_.cbegin(), suffix_.cend(), new_elem)
-          == suffix_.cend()) {
-        suffix_.push_front(new_elem);
+      if (std::find(list_.cbegin(), list_.cend(), new_elem) == list_.cend()) {
+        list_.push_front(new_elem);
       }
       omp_unset_lock(&mutex_);
     }
   }
 
-  void make_consecutive()
+  iterator begin()
   {
-    while (!suffix_.empty()) {
-      prefix_.push_back(suffix_.front());
-      suffix_.pop_front();
-    }
+    return list_.begin();
   }
 
-  iterator begin();
-  iterator end();
+  iterator end()
+  {
+    return list_.end();
+  }
 
 private:
-  std::vector<value_type> prefix_;
-  std::forward_list<value_type> suffix_;
+  std::forward_list<value_type> list_;
   omp_lock_t mutex_;
-
-  friend class NeighborListIter<value_type, prefix_iter, suffix_iter>;
 };
-
-template <typename T_value, typename T_vec_iter, typename T_list_iter>
-class NeighborListIter
-{
-public:
-  NeighborListIter(NeighborList* nl, T_vec_iter it)
-  {
-    base_ = nl;
-    if (it != base_->prefix_.end()) {
-      in_prefix_ = true;
-      vec_iter_ = it;
-    } else {
-      in_prefix_ = false;
-      list_iter_ = base_->suffix_.begin();
-    }
-  }
-
-  NeighborListIter(NeighborList* nl, T_list_iter it)
-  {
-    in_prefix_ = false;
-    list_iter_ = it;
-  }
-
-  T_value operator*()
-  {
-    if (in_prefix_) {
-      return *vec_iter_;
-    } else {
-      return *list_iter_;
-    }
-  }
-
-  bool operator==(const NeighborListIter& other)
-  {
-    if (in_prefix_ != other.in_prefix_) return false;
-    if (in_prefix_) {
-      return vec_iter_ == other.vec_iter_;
-    } else {
-      return list_iter_ == other.list_iter_;
-    }
-  }
-
-  bool operator!=(const NeighborListIter& other)
-  {return !(*this == other);}
-
-  NeighborListIter& operator++()
-  {
-    if (in_prefix_) {
-      // We are in the prefix so increment the prefix iterator.
-      ++vec_iter_;
-
-      // If we've reached the end of the prefix, switch to the suffix iterator.
-      if (vec_iter_ == base_->prefix_.end()) {
-        in_prefix_ = false;
-        list_iter_ = base_->suffix_.begin();
-      }
-
-    } else {
-      // We are in the suffix so increment the suffix iterator.
-      ++list_iter_;
-    }
-
-    return *this;
-  }
-
-private:
-  NeighborList* base_;
-
-  union {
-    T_vec_iter vec_iter_;
-    T_list_iter list_iter_;
-  };
-
-  bool in_prefix_;
-};
-
-inline NeighborList::iterator
-NeighborList::begin()
-{
-  return iterator(this, prefix_.begin());
-}
-
-inline NeighborList::iterator
-NeighborList::end()
-{
-  return iterator(this, suffix_.end());
-}
 
 //==============================================================================
 //! A geometry primitive that links surfaces, universes, and materials
