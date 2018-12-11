@@ -57,6 +57,9 @@ extern std::unordered_map<int32_t, int32_t> cell_map;
 extern std::vector<Universe*> universes;
 extern std::unordered_map<int32_t, int32_t> universe_map;
 
+extern std::vector<std::vector<int32_t>> neighbor_lists;
+#pragma omp threadprivate(neighbor_lists)
+
 } // namespace model
 
 //==============================================================================
@@ -72,50 +75,6 @@ public:
   //! \brief Write universe information to an HDF5 group.
   //! \param group_id An HDF5 group id.
   void to_hdf5(hid_t group_id) const;
-};
-
-//==============================================================================
-//==============================================================================
-
-class NeighborList
-{
-public:
-  using value_type = int32_t;
-  using iterator = std::forward_list<value_type>::iterator;
-
-  NeighborList()
-  {
-    omp_init_lock(&mutex_);
-  }
-
-  ~NeighborList()
-  {
-    omp_destroy_lock(&mutex_);
-  }
-
-  void push(int new_elem)
-  {
-    if (auto lock_acquired = omp_test_lock(&mutex_)) {
-      if (std::find(list_.cbegin(), list_.cend(), new_elem) == list_.cend()) {
-        list_.push_front(new_elem);
-      }
-      omp_unset_lock(&mutex_);
-    }
-  }
-
-  iterator begin()
-  {
-    return list_.begin();
-  }
-
-  iterator end()
-  {
-    return list_.end();
-  }
-
-private:
-  std::forward_list<value_type> list_;
-  omp_lock_t mutex_;
 };
 
 //==============================================================================
@@ -151,9 +110,6 @@ public:
   //! Reverse Polish notation for region expression
   std::vector<std::int32_t> rpn_;
   bool simple_;  //!< Does the region contain only intersections?
-
-  //! \brief Neighboring cells in the same universe.
-  NeighborList neighbors;
 
   Position translation_ {0, 0, 0}; //!< Translation vector for filled universe
 

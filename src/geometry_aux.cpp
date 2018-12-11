@@ -447,6 +447,8 @@ free_memory_geometry_c()
   model::cell_map.clear();
   model::n_cells = 0;
 
+  model::neighbor_lists.clear();
+
   for (Universe* u : model::universes) {delete u;}
   model::universes.clear();
   model::universe_map.clear();
