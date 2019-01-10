@@ -3635,6 +3635,9 @@ contains
     integer :: i, j, l
     real(8) :: dsig_s, dsig_a, dsig_f
 
+    real(8) :: numer, denom, beta, kT, T, D, Delta, sig_s, density, logd_kern, &
+               kern
+
     ! A void material cannot be perturbed so it will not affect flux derivatives
     if (p % material == MATERIAL_VOID) return
 
@@ -3675,32 +3678,48 @@ contains
           end associate
 
         case (DIFF_TEMPERATURE)
+          numer = ZERO
+          denom = ZERO
           associate (mat => materials(p % material))
             if (mat % id() == deriv % diff_material) then
               do l=1, mat % n_nuclides
                 associate (nuc => nuclides(mat % nuclide(l)))
-                  if (mat % nuclide(l) == p % event_nuclide .and. &
-                       multipole_in_range(nuc % ptr, p % last_E)) then
-                    ! phi is proportional to Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-                    ! (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
+                  if (multipole_in_range(nuc % ptr, p % last_E)) then
+                    beta = (nuc % awr + ONE) / nuc % awr
+                    kT = p % sqrtkT**2
+                    T = kT / K_BOLTZMANN
+                    D = (p % last_E + p % E &
+                         - TWO * sqrt(p % last_E * p % E) * p % mu) &
+                         / (nuc % awr * kT)
+                    Delta = (p % E - p % last_E) / kT
+                    sig_s = micro_xs(mat % nuclide(l)) % total &
+                         - micro_xs(mat % nuclide(l)) % absorption
+                    density = mat % atom_density(l)
                     call multipole_deriv_eval(nuc % ptr, p % last_E, &
                          p % sqrtkT, dsig_s, dsig_a, dsig_f)
-                    deriv % flux_deriv = deriv % flux_deriv + dsig_s&
-                         / (micro_xs(mat % nuclide(l)) % total &
-                         - micro_xs(mat % nuclide(l)) % absorption)
-                    ! Note that this is an approximation!  The real scattering
-                    ! cross section is Sigma_s(E'->E, uvw'->uvw) =
-                    ! Sigma_s(E') * P(E'->E, uvw'->uvw).  We are assuming that
-                    ! d_P(E'->E, uvw'->uvw) / d_T = 0 and only computing
-                    ! d_S(E') / d_T.  Using this approximation in the vicinity
-                    ! of low-energy resonances causes errors (~2-5% for PWR
-                    ! pincell eigenvalue derivatives).
+                    logd_kern = -(ONE + (HALF*(Delta + D)**2 - Delta - D) / D) &
+                         / (TWO * T)
+                    kern = beta**2 / (FOUR * kT * SQRT_PI) &
+                         * sqrt(p % E / (p % last_E * D)) &
+                         * exp(-(Delta + D)**2 / (FOUR * D))
+                    numer = numer + density*kern*(dsig_s + sig_s * logd_kern)
+                    denom = denom + density * kern * sig_s
                   end if
+                  !if (mat % nuclide(l) == p % event_nuclide .and. &
+                  !     multipole_in_range(nuc % ptr, p % last_E)) then
+                  !  call multipole_deriv_eval(nuc % ptr, p % last_E, &
+                  !       p % sqrtkT, dsig_s, dsig_a, dsig_f)
+                  !  deriv % flux_deriv = deriv % flux_deriv + dsig_s&
+                  !       / (micro_xs(mat % nuclide(l)) % total &
+                  !       - micro_xs(mat % nuclide(l)) % absorption)
+                  !end if
                 end associate
               end do
             end if
           end associate
+          if (denom > ZERO) then
+            deriv % flux_deriv = deriv % flux_deriv + numer / denom
+          end if
         end select
       end associate
     end do
