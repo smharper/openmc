@@ -147,7 +147,7 @@ WindowedMultipole::evaluate_deriv(double E, double sqrtkT)
       " for 0 Kelvin cross sections.");
   }
 
-  // Locate us
+  // Locate window containing energy
   int i_window = (sqrtE - std::sqrt(E_min_)) / spacing_;
   int startw = windows_(i_window, 0) - 1;
   int endw = windows_(i_window, 1) - 1;
@@ -157,10 +157,28 @@ WindowedMultipole::evaluate_deriv(double E, double sqrtkT)
   double sig_a = 0.0;
   double sig_f = 0.0;
 
-  // TODO Polynomials: Some of the curvefit polynomials Doppler broaden so
-  // rigorously we should be computing the derivative of those.  But in
-  // practice, those derivatives are only large at very low energy and they
-  // have no effect on reactor calculations.
+  // ==========================================================================
+  // Add the contribution from the curvefit polynomial.  The math is nasty so
+  // the polynomial derivatives are approximated using a finite difference
+  // between T + 1K and T - 1K.
+
+  if (broaden_poly_(i_window)) {
+    double dopp1 = sqrt_awr_ / std::sqrt(K_BOLTZMANN * (T - 1.0));
+    double dopp2 = sqrt_awr_ / std::sqrt(K_BOLTZMANN * (T + 1.0));
+    double polys1[fit_order_ + 1];
+    double polys2[fit_order_ + 1];
+    broaden_wmp_polynomials(E, dopp1, fit_order_+1, polys1);
+    broaden_wmp_polynomials(E, dopp2, fit_order_+1, polys2);
+
+    for (int i_poly = 0; i_poly < fit_order_ + 1; ++i_poly) {
+      double d_poly = (polys2[i_poly] - polys1[i_poly]) / 2.;
+      sig_s += curvefit_(i_window, i_poly, FIT_S) * d_poly;
+      sig_a += curvefit_(i_window, i_poly, FIT_A) * d_poly;
+      if (fissionable_) {
+        sig_f += curvefit_(i_window, i_poly, FIT_F) * d_poly;
+      }
+    }
+  }
 
   // ==========================================================================
   // Add the contribution from the poles in this window.
