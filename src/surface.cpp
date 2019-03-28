@@ -161,23 +161,6 @@ Surface::Surface(pugi::xml_node surf_node)
 
 }
 
-bool
-Surface::sense(Position r, Direction u) const
-{
-  // Evaluate the surface equation at the particle's coordinates to determine
-  // which side the particle is on.
-  const double f = evaluate(r);
-
-  // Check which side of surface the point is on.
-  if (std::abs(f) < FP_COINCIDENT) {
-    // Particle may be coincident with this surface. To determine the sense, we
-    // look at the direction of the particle relative to the surface normal (by
-    // default in the positive direction) via their dot product.
-    return u.dot(normal(r)) > 0.0;
-  }
-  return f > 0.0;
-}
-
 Direction
 Surface::reflect(Position r, Direction u) const
 {

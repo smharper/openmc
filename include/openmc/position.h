@@ -55,10 +55,10 @@ struct Position {
   //! Dot product of two vectors
   //! \param[in] other Vector to take dot product with
   //! \result Resulting dot product
-  inline double dot(Position other) {
+  inline double dot(Position other) const {
     return x*other.x + y*other.y + z*other.z;
   }
-  inline double norm() {
+  inline double norm() const {
     return std::sqrt(x*x + y*y + z*z);
   }
 
