@@ -273,5 +273,30 @@ std::complex<double> faddeeva(std::complex<double> z);
 //! \return Derivative of Faddeeva function evaluated at z
 std::complex<double> w_derivative(std::complex<double> z, int order);
 
+//==============================================================================
+//! Evaluate I_0(x) * exp(-x) for a real x >= 0
+//
+//! I_0(x) is the modified Bessel function.  To compute the Bessel function,
+//! this code uses a power series expansion for small x and an asymptotic
+//! expansion for large x.  The target accuracy is 10^-6 and the results have
+//! been checked against scipy.special.ive in Python for x < 10^9.  This
+//! function may fail silently for answers which require many terms in the
+//! series.  "DLMF" in the comments refers to the NIST Digital Library of
+//! Mathematical Functions. http://dlmf.nist.gov/, Release 1.0.16 of 2017-09-18.
+//! F. W. J. Olver, A. B. Olde Daalhuis, D. W. Lozier, B. I. Schneider,
+//! R. F. Boisvert, C. W. Clark, B. R. Miller, and B. V. Saunders, eds.
+//==============================================================================
+
+double bessel_I0_exp(double x);
+
+//==============================================================================
+//! Evaluate I_1(x) * exp(-x) for a real x >= 0
+//
+//! I_1(x) is the modified Bessel function.  The implementation is similar to
+//! bessel_I0_exp.
+//==============================================================================
+
+double bessel_I1_exp(double x);
+
 } // namespace openmc
 #endif // OPENMC_MATH_FUNCTIONS_H

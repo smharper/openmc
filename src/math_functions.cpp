@@ -886,4 +886,119 @@ std::complex<double> w_derivative(std::complex<double> z, int order)
   }
 }
 
+double bessel_I0_exp(double x)
+{
+  constexpr int MAX_N_TERMS {20};
+  constexpr double TOL {1e-6};
+
+  if (x == 0.0) {
+    return 1.0;
+
+  // If x < 10, compute I0(x) via power series, then multiply by the system
+  // value of exp(-x).  The power series expression of I_nu(z) is given in DLMF
+  // 10.25.2 as
+  // I_nu(z) = (z/2)^nu * sum_{k=0}^inf (z^2 / 4)^k / (k! * Gamma(nu+k+1))
+  // In our case, nu = 0 which simplifies the expression to
+  // I_0(z) = sum_{k=0}^inf (z^2 / 4)^k / (k!)^2
+  } else if (x < 10.0) {
+    double val = 1.0;
+    double numerator = 1.0;
+    double denominator = 1.0;
+    for (int k = 1; k <= MAX_N_TERMS; ++k) {
+      numerator *= x * x / 4.0;  // = (2^-2 * x^2)^k
+      denominator *= k * k;  // = (k!)^2
+      double delta = numerator / denominator;  // = term in summation
+      bool done = std::abs(delta / val) < TOL;  // Check for convergence
+      val += delta;  // Add this term to the output
+      if (done) break;  // Terminate the do-loop if converged
+    }
+    return val * std::exp(-x);  // Scale by the exponential and return
+
+  // If x > 10, compute I0(x) via asymptotic expansion with the exp(-x) factor
+  // included analytically.  The asymptotic expansion of I_nu(z) (Hankel's
+  // expansion) is given in DLMF 10.40.1 and 10.17.1 as
+  // I_nu(z) ~ e^z / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(nu) / z^k
+  // where
+  // a_k(nu) = (4*nu^2 - 1^2) * (4*nu^2 - 3^2) * ... * (4*nu^2 - (2k-1)^2)
+  //           / (k! 8^k)
+  // a_0(nu) = 1
+  // In our case with nu = 0,
+  // a_k(0) = (-1^2) * (-3^2) * ... * (-(2k-1)^2) / (k! 8^k)
+  // a_k(0) = (-1)^k * 1^2 * 3^2 * ... * (2k-1)^2 / (k! 8^k)
+  // We also multiply by e^-z to get
+  // I_0(z) e^-z ~ 1 / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(0) / z^k
+  // (Note that the (-1)^k in a_k(0) and I_0 cancel out.)
+  } else {
+    double val = 1.0;
+    double a = 1.0;
+    double denominator = 1.0;
+    for (int k = 1; k <= MAX_N_TERMS; ++k) {
+      a *= (2.0 * k - 1.0) * (2.0 * k - 1.0) / (k * 8.0);  // = a_k(0)
+      denominator *= x;  // = z^k
+      double delta = a / denominator;  // = term in summation
+      bool done = std::abs(delta / val) < TOL;  // Check for convergence
+      val += delta;  // Add this term to the output
+      if (done) break;  // Terminate the do-loop if converged
+    }
+    // Add leading factor and return
+    return val / std::sqrt(2.0 * openmc::PI * x);
+  }
+}
+
+double bessel_I1_exp(double x)
+{
+  constexpr int MAX_N_TERMS {20};
+  constexpr double TOL {1e-6};
+
+  if (x == 0.0) {
+    return 0.0;
+
+  // If x < 10, compute I1(x) via power series, then multiply by the system
+  // value of exp(-x).  The power series expression of I_nu(z) is given in DLMF
+  // 10.25.2 as
+  // I_nu(z) = (z/2)^nu * sum_{k=0}^inf (z^2 / 4)^k / (k! * Gamma(nu+k+1))
+  // In our case, nu = 1 which simplifies the expression to
+  // I_1(z) = sum_{k=0}^inf (z^2 / 4)^k / (k! * (1+k)!)
+  } else if (x < 10.0) {
+    double val = 1.0;
+    double numerator = 1.0;
+    double denominator = 1.0;
+    for (int k = 1; k <= MAX_N_TERMS; ++k) {
+      numerator *= x * x / 4.0;  // = (2^-2 * x^2)^k
+      denominator *= k * (1 + k);  // = k! * (1+k)!
+      double delta = numerator / denominator;  // = term in summation
+      bool done = std::abs(delta / val) < TOL;  // Check for convergence
+      val += delta;  // Add this term to the output
+      if (done) break;  // Terminate the do-loop if converged
+    }
+    // Add leading factor and return
+    return val * x * 0.5 * std::exp(-x);
+
+  // If x > 10, compute I1(x) via asymptotic expansion with the exp(-x) factor
+  // included analytically.  The asymptotic expansion of I_nu(z) (Hankel's
+  // expansion) is given in DLMF 10.40.1 and 10.17.1 as
+  // I_nu(z) ~ e^z / sqrt(2*pi*z) * sum_{k=0}^inf (-1)^k * a_k(nu) / z^k
+  // where
+  // a_k(nu) = (4*nu^2 - 1^2) * (4*nu^2 - 3^2) * ... * (4*nu^2 - (2k-1)^2)
+  //           / (k! 8^k)
+  // a_0(nu) = 1
+  } else {
+    double val = 1.0;
+    double a = 1.0;
+    double sign = 1.0;
+    double denominator = 1.0;
+    for (int k = 1; k <= MAX_N_TERMS; ++k) {
+      sign = -sign;
+      a *= (4.0 - (2.0 * k - 1.0) * (2.0 * k - 1.0)) / (k * 8.0);  // = a_k(1)
+      denominator *= x;  // = z^k
+      double delta = sign * a / denominator;  // = term in summation
+      bool done = std::abs(delta / val) < TOL;  // Check for convergence
+      val += delta;  // Add this term to the output
+      if (done) break;  // Terminate the do-loop if converged
+    }
+    // Add leading factor and return
+    return val / std::sqrt(2.0 * openmc::PI * x);
+  }
+}
+
 } // namespace openmc

@@ -2,6 +2,7 @@
 
 #include "openmc/error.h"
 #include "openmc/material.h"
+#include "openmc/math_functions.h"
 #include "openmc/nuclide.h"
 #include "openmc/settings.h"
 #include "openmc/tallies/tally.h"
@@ -653,25 +654,95 @@ void score_collision_derivative(const Particle* p)
       break;
 
     case DIFF_TEMPERATURE:
-      // Loop over the material's nuclides until we find the event nuclide.
-      for (auto i_nuc : material.nuclide_) {
-        const auto& nuc {*data::nuclides[i_nuc]};
-        if (i_nuc == p->event_nuclide_ && multipole_in_range(&nuc, p->E_last_)) {
-          // phi is proportional to Sigma_s
-          // (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-          // (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
-          const auto& micro_xs {p->neutron_xs_[i_nuc]};
-          double dsig_s, dsig_a, dsig_f;
-          std::tie(dsig_s, dsig_a, dsig_f)
-            = nuc.multipole_->evaluate_deriv(p->E_last_, p->sqrtkT_);
-          deriv.flux_deriv += dsig_s / (micro_xs.total - micro_xs.absorption);
-          // Note that this is an approximation!  The real scattering cross
-          // section is
-          // Sigma_s(E'->E, u'->u) = Sigma_s(E') * P(E'->E, u'->u).
-          // We are assuming that d_P(E'->E, u'->u) / d_T = 0 and only
-          // computing d_S(E') / d_T.  Using this approximation in the vicinity
-          // of low-energy resonances causes errors (~2-5% for PWR pincell
-          // eigenvalue derivatives).
+      double kT = p->sqrtkT_ * p->sqrtkT_;
+
+      if (p->E_last_ < 400.0 * kT) {
+        constexpr double X_EXP {30};
+        constexpr int n_Er {200};
+
+        double T = kT / K_BOLTZMANN;
+
+        double mat_kern = 0.0;
+        double mat_kern_deriv = 0.0;
+
+        for (int l = 0; l < material.nuclide_.size(); ++l) {
+          const auto& nuc = data::nuclides[material.nuclide_[l]];
+          if (!multipole_in_range(nuc.get(), p->E_last_)) continue;
+
+          double beta = (1.0 + nuc->awr_) / nuc->awr_;
+          double E_star = (beta * 0.5) * (beta * 0.5) * (p->E_last_ + p->E_
+            - 2.0 * std::sqrt(p->E_last_ * p->E_) * p->mu_);
+          double H
+            = std::pow((1.0+nuc->awr_) / (std::sqrt(nuc->awr_) * p->sqrtkT_), 3)
+            / (4.0 * SQRT_PI) * std::sqrt(p->E_ / (p->E_last_ * E_star))
+            * material.atom_density_(l);
+          double a_hat = nuc->awr_ / kT;
+          double E0 = p->E_last_ / nuc->awr_
+            - beta * std::sqrt(p->E_last_ * p->E_) * p->mu_;
+
+          if (E_star != 0.0) {
+            double b = beta * 0.5 * std::sqrt(a_hat * p->E_last_ * p->E_
+              * (1.0 - p->mu_ * p->mu_) / E_star);
+            double c = a_hat * (E0 - E_star);
+            double x_c_sq = c + b*b + X_EXP;
+            if (x_c_sq <= 0.0) continue;
+            double x_c = std::sqrt(x_c_sq);
+
+            double Er_min = E_star + std::pow(std::max(0.0, b-x_c), 2) / a_hat;
+            if (Er_min < E_star) Er_min = E_star;
+            if (Er_min < nuc->multipole_->E_min_)
+              Er_min = nuc->multipole_->E_min_;
+            double Er_max = E_star + (b + x_c)*(b + x_c) / a_hat;
+            if (Er_min < E_star) Er_min = E_star;
+            if (Er_max > nuc->multipole_->E_max_)
+              Er_max = nuc->multipole_->E_max_;
+            double dE = (Er_max - Er_min) / n_Er;
+
+            double Er = Er_min + 0.5 * dE;
+            double nuc_kern = 0.0;
+            double nuc_kern_deriv = 0.0;
+            for (int i = 0; i < n_Er-1; ++i) {
+              double sig_s, sig_a, sig_f;
+              std::tie(sig_s, sig_a, sig_f)
+                = nuc->multipole_->evaluate(Er, 0.0);
+              double eta_hat = ((nuc->awr_ + 1.0) / kT
+                * std::sqrt(p->E_last_ * p->E_ * (1.0 - p->mu_*p->mu_))
+                * std::sqrt(Er / E_star - 1.0));
+              double integrand = std::exp(-a_hat * (Er - E0) + eta_hat)
+                * sig_s * 0.5 * bessel_I0_exp(eta_hat) * dE;
+              nuc_kern += integrand;
+              nuc_kern_deriv += integrand * (a_hat * (Er - E0) - 1.5
+                - eta_hat * bessel_I1_exp(eta_hat) / bessel_I0_exp(eta_hat));
+              Er += dE;
+            }
+            mat_kern += H * nuc_kern;
+            mat_kern_deriv += H * nuc_kern_deriv / T;
+          }
+        }
+        if (mat_kern > 0.0) deriv.flux_deriv += mat_kern_deriv / mat_kern;
+
+      } else {
+        // Loop over the material's nuclides until we find the event nuclide.
+        for (auto i_nuc : material.nuclide_) {
+          const auto& nuc {*data::nuclides[i_nuc]};
+          if (i_nuc == p->event_nuclide_
+              && multipole_in_range(&nuc, p->E_last_)) {
+            // phi is proportional to Sigma_s
+            // (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
+            // (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
+            const auto& micro_xs {p->neutron_xs_[i_nuc]};
+            double dsig_s, dsig_a, dsig_f;
+            std::tie(dsig_s, dsig_a, dsig_f)
+              = nuc.multipole_->evaluate_deriv(p->E_last_, p->sqrtkT_);
+            deriv.flux_deriv += dsig_s / (micro_xs.total - micro_xs.absorption);
+            // Note that this is an approximation!  The real scattering cross
+            // section is
+            // Sigma_s(E'->E, u'->u) = Sigma_s(E') * P(E'->E, u'->u).
+            // We are assuming that d_P(E'->E, u'->u) / d_T = 0 and only
+            // computing d_S(E') / d_T.  Using this approximation in the
+            // vicinity of low-energy resonances causes errors (~2-5% for PWR
+            // pincell eigenvalue derivatives).
+          }
         }
       }
       break;
