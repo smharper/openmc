@@ -63,7 +63,7 @@ check_cell_overlap(Particle* p)
 //==============================================================================
 
 bool
-find_cell_inner(Particle* p, const NeighborList* neighbor_list)
+find_cell_inner(Particle* p, const std::vector<int32_t>* neighbor_list)
 {
   // Find which cell of this universe the particle is in.  Use the neighbor list
   // to shorten the search if one was provided.
@@ -290,14 +290,15 @@ find_cell(Particle* p, bool use_neighbor_lists)
 
     // Search for the particle in that cell's neighbor list.  Return if we
     // found the particle.
-    bool found = find_cell_inner(p, &c.neighbors_);
+    bool found = find_cell_inner(p, &model::neighbor_lists[i_cell]);
     if (found) return found;
 
     // The particle could not be found in the neighbor list.  Try searching all
     // cells in this universe, and update the neighbor list if we find a new
     // neighboring cell.
     found = find_cell_inner(p, nullptr);
-    if (found) c.neighbors_.push_back(p->coord[coord_lvl].cell);
+    if (found)
+      model::neighbor_lists[i_cell].push_back(p->coord[coord_lvl].cell);
     return found;
 
   } else {

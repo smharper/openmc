@@ -11,7 +11,6 @@
 #include "pugixml.hpp"
 
 #include "openmc/constants.h"
-#include "openmc/neighbor_list.h"
 #include "openmc/position.h"
 
 #ifdef DAGMC
@@ -52,6 +51,9 @@ extern std::unordered_map<int32_t, int32_t> cell_map;
 
 extern std::vector<Universe*> universes;
 extern std::unordered_map<int32_t, int32_t> universe_map;
+
+extern std::vector<std::vector<int32_t>> neighbor_lists;
+#pragma omp threadprivate(neighbor_lists)
 
 } // namespace model
 
@@ -103,9 +105,6 @@ public:
   //! Reverse Polish notation for region expression
   std::vector<std::int32_t> rpn_;
   bool simple_;  //!< Does the region contain only intersections?
-
-  //! \brief Neighboring cells in the same universe.
-  NeighborList neighbors_;
 
   Position translation_ {0, 0, 0}; //!< Translation vector for filled universe
 

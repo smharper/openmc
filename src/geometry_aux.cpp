@@ -405,14 +405,6 @@ maximum_levels(int32_t univ)
 
 //==============================================================================
 
-void
-geometry_finalize_generation()
-{
-  for (Cell* c : model::cells) c->neighbors_.make_consecutive();
-}
-
-//==============================================================================
-
 
 void
 free_memory_geometry_c()
@@ -421,6 +413,8 @@ free_memory_geometry_c()
   model::cells.clear();
   model::cell_map.clear();
   model::n_cells = 0;
+
+  model::neighbor_lists.clear();
 
   for (Universe* u : model::universes) {delete u;}
   model::universes.clear();
