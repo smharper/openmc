@@ -406,6 +406,15 @@ maximum_levels(int32_t univ)
 //==============================================================================
 
 void
+geometry_finalize_generation()
+{
+  for (Cell* c : model::cells) c->neighbors_.make_consecutive();
+}
+
+//==============================================================================
+
+
+void
 free_memory_geometry_c()
 {
   for (Cell* c : model::cells) {delete c;}
