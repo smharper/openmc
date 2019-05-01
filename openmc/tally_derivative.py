@@ -110,4 +110,11 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         element.set("material", str(self.material))
         if self.variable == 'nuclide_density':
             element.set("nuclide", self.nuclide)
+        elif self.variable == 'temperature':
+            element.set("use_kern_deriv", str(self.use_kern_deriv).lower())
+            if self.use_kern_deriv:
+                element.set("kern_min_E", str(self.kern_min_E))
+                element.set("kern_max_E", str(self.kern_max_E))
+                element.set("use_finite_diff",
+                            str(self.use_finite_diff).lower())
         return element

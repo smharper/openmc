@@ -21,6 +21,11 @@ struct TallyDerivative {
   int diff_nuclide;  //!< Nuclide this material is applied to
   double flux_deriv;  //!< Derivative of the current particle's weight
 
+  bool use_kern_deriv {false};
+  double kern_min_E;
+  double kern_max_E;
+  bool use_finite_diff {false};
+
   TallyDerivative() {}
   explicit TallyDerivative(pugi::xml_node node);
 };

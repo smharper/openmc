@@ -65,6 +65,17 @@ TallyDerivative::TallyDerivative(pugi::xml_node node)
   } else if (variable_str == "temperature") {
     variable = DIFF_TEMPERATURE;
 
+    if (check_for_node(node, "use_kern_deriv")) {
+      use_kern_deriv = get_node_value(node, "use_kern_deriv") == "true";
+    }
+    if (use_kern_deriv) {
+      kern_min_E = std::stod(get_node_value(node, "kern_min_E"));
+      kern_max_E = std::stod(get_node_value(node, "kern_max_E"));
+    }
+    if (check_for_node(node, "use_finite_diff")) {
+      use_finite_diff = get_node_value(node, "use_finite_diff") == "true";
+    }
+
   } else {
     std::stringstream out;
     out << "Unrecognized variable \"" << variable_str
@@ -614,6 +625,146 @@ score_track_derivative(const Particle* p, double distance)
   }
 }
 
+double
+eval_scat_kern(const openmc::Particle& p, double delta_T)
+{
+  constexpr double X_EXP {30};
+  constexpr int n_Er {200};
+  constexpr bool use_cxs {false};
+
+  double sqrtkT = std::sqrt(p.sqrtkT_*p.sqrtkT_ + K_BOLTZMANN*delta_T);
+  double kT = sqrtkT * sqrtkT;
+
+  double kern = 0.0;
+
+  const auto& mat = model::materials[p.material_];
+  for (int l = 0; l < mat->nuclide_.size(); ++l) {
+    const auto& nuc = data::nuclides[mat->nuclide_[l]];
+    double beta = (1.0 + nuc->awr_) / nuc->awr_;
+    double E_star = (beta * 0.5) * (beta * 0.5) * (p.E_last_ + p.E_
+      - 2.0 * std::sqrt(p.E_last_ * p.E_) * p.mu_);
+    double H
+      = std::pow((1.0 + nuc->awr_) / (std::sqrt(nuc->awr_) * sqrtkT), 3)
+      / (4.0 * SQRT_PI) * std::sqrt(p.E_ / (p.E_last_ * E_star))
+      * mat->atom_density_(l);
+    double a_hat = nuc->awr_ / kT;
+    double E0 = p.E_last_ / nuc->awr_
+      - beta * std::sqrt(p.E_last_ * p.E_) * p.mu_;
+
+    double sig_s, sig_a, sig_f;
+    if (use_cxs) sig_s = p.neutron_xs_[mat->nuclide_[l]].elastic;
+
+    if (E_star != 0.0) {
+      double b = beta * 0.5 * std::sqrt(a_hat * p.E_last_ * p.E_
+        * (1.0 - p.mu_ * p.mu_) / E_star);
+      double c = a_hat * (E0 - E_star);
+      double x_c_sq = c + b*b + X_EXP;
+      if (x_c_sq <= 0.0) continue;
+      double x_c = std::sqrt(x_c_sq);
+
+      double Er_min = E_star + std::pow(std::max(0.0, b-x_c), 2) / a_hat;
+      if (Er_min < E_star) Er_min = E_star;
+      if (Er_min < nuc->multipole_->E_min_)
+        Er_min = nuc->multipole_->E_min_;
+      double Er_max = E_star + (b + x_c)*(b + x_c) / a_hat;
+      if (Er_min < E_star) Er_min = E_star;
+      if (Er_max > nuc->multipole_->E_max_)
+        Er_max = nuc->multipole_->E_max_;
+      double dE = (Er_max - Er_min) / n_Er;
+
+      double Er = Er_min + 0.5 * dE;
+      double nuc_kern = 0.0;
+      for (int i = 0; i < n_Er-1; ++i) {
+        if (Er > nuc->multipole_->E_max_) break;
+        if (!use_cxs)
+          std::tie(sig_s, sig_a, sig_f) = nuc->multipole_->evaluate(Er, 0.0);
+        double eta_hat = ((nuc->awr_ + 1.0) / kT
+          * std::sqrt(p.E_last_ * p.E_ * (1.0 - p.mu_*p.mu_))
+          * std::sqrt(Er / E_star - 1.0));
+        double integrand = std::exp(-a_hat * (Er - E0) + eta_hat)
+          * sig_s * 0.5 * bessel_I0_exp(eta_hat) * dE;
+        nuc_kern += integrand;
+        Er += dE;
+      }
+      kern += H * nuc_kern;
+    }
+  }
+  return kern;
+}
+
+std::pair<double, double>
+eval_scat_kern_deriv(const openmc::Particle& p)
+{
+  constexpr double X_EXP {30};
+  constexpr int n_Er {200};
+  constexpr bool use_cxs {false};
+
+  double sqrtkT = p.sqrtkT_;
+  double kT = sqrtkT * sqrtkT;
+  double T = kT / K_BOLTZMANN;
+
+  double kern = 0.0;
+  double kern_deriv = 0.0;
+
+  const auto& mat = model::materials[p.material_];
+  for (int l = 0; l < mat->nuclide_.size(); ++l) {
+    const auto& nuc = data::nuclides[mat->nuclide_[l]];
+    double beta = (1.0 + nuc->awr_) / nuc->awr_;
+    double E_star = (beta * 0.5) * (beta * 0.5) * (p.E_last_ + p.E_
+      - 2.0 * std::sqrt(p.E_last_ * p.E_) * p.mu_);
+    double H
+      = std::pow((1.0 + nuc->awr_) / (std::sqrt(nuc->awr_) * sqrtkT), 3)
+      / (4.0 * SQRT_PI) * std::sqrt(p.E_ / (p.E_last_ * E_star))
+      * mat->atom_density_(l);
+    double a_hat = nuc->awr_ / kT;
+    double E0 = p.E_last_ / nuc->awr_
+      - beta * std::sqrt(p.E_last_ * p.E_) * p.mu_;
+
+    double sig_s, sig_a, sig_f;
+    if (use_cxs) sig_s = p.neutron_xs_[mat->nuclide_[l]].elastic;
+
+    if (E_star != 0.0) {
+      double b = beta * 0.5 * std::sqrt(a_hat * p.E_last_ * p.E_
+        * (1.0 - p.mu_ * p.mu_) / E_star);
+      double c = a_hat * (E0 - E_star);
+      double x_c_sq = c + b*b + X_EXP;
+      if (x_c_sq <= 0.0) continue;
+      double x_c = std::sqrt(x_c_sq);
+
+      double Er_min = E_star + std::pow(std::max(0.0, b-x_c), 2) / a_hat;
+      if (Er_min < E_star) Er_min = E_star;
+      if (Er_min < nuc->multipole_->E_min_)
+        Er_min = nuc->multipole_->E_min_;
+      double Er_max = E_star + (b + x_c)*(b + x_c) / a_hat;
+      if (Er_min < E_star) Er_min = E_star;
+      if (Er_max > nuc->multipole_->E_max_)
+        Er_max = nuc->multipole_->E_max_;
+      double dE = (Er_max - Er_min) / n_Er;
+
+      double Er = Er_min + 0.5 * dE;
+      double nuc_kern = 0.0;
+      double nuc_kern_deriv = 0.0;
+      for (int i = 0; i < n_Er-1; ++i) {
+        if (Er > nuc->multipole_->E_max_) break;
+        if (!use_cxs)
+          std::tie(sig_s, sig_a, sig_f) = nuc->multipole_->evaluate(Er, 0.0);
+        double eta_hat = ((nuc->awr_ + 1.0) / kT
+          * std::sqrt(p.E_last_ * p.E_ * (1.0 - p.mu_*p.mu_))
+          * std::sqrt(Er / E_star - 1.0));
+        double integrand = std::exp(-a_hat * (Er - E0) + eta_hat)
+          * sig_s * 0.5 * bessel_I0_exp(eta_hat) * dE;
+        nuc_kern += integrand;
+        nuc_kern_deriv += integrand * (a_hat * (Er - E0) - 1.5
+          - eta_hat * bessel_I1_exp(eta_hat) / bessel_I0_exp(eta_hat));
+        Er += dE;
+      }
+      kern += H * nuc_kern;
+      kern_deriv += H * nuc_kern / T;
+    }
+  }
+  return {kern, kern_deriv};
+}
+
 void score_collision_derivative(const Particle* p)
 {
   // A void material cannot be perturbed so it will not affect flux derivatives.
@@ -654,72 +805,20 @@ void score_collision_derivative(const Particle* p)
       break;
 
     case DIFF_TEMPERATURE:
-      double kT = p->sqrtkT_ * p->sqrtkT_;
-
-      if (p->E_last_ < 400.0 * kT) {
-        constexpr double X_EXP {30};
-        constexpr int n_Er {200};
-
-        double T = kT / K_BOLTZMANN;
-
-        double mat_kern = 0.0;
-        double mat_kern_deriv = 0.0;
-
-        for (int l = 0; l < material.nuclide_.size(); ++l) {
-          const auto& nuc = data::nuclides[material.nuclide_[l]];
-          if (!multipole_in_range(nuc.get(), p->E_last_)) continue;
-
-          double beta = (1.0 + nuc->awr_) / nuc->awr_;
-          double E_star = (beta * 0.5) * (beta * 0.5) * (p->E_last_ + p->E_
-            - 2.0 * std::sqrt(p->E_last_ * p->E_) * p->mu_);
-          double H
-            = std::pow((1.0+nuc->awr_) / (std::sqrt(nuc->awr_) * p->sqrtkT_), 3)
-            / (4.0 * SQRT_PI) * std::sqrt(p->E_ / (p->E_last_ * E_star))
-            * material.atom_density_(l);
-          double a_hat = nuc->awr_ / kT;
-          double E0 = p->E_last_ / nuc->awr_
-            - beta * std::sqrt(p->E_last_ * p->E_) * p->mu_;
-
-          if (E_star != 0.0) {
-            double b = beta * 0.5 * std::sqrt(a_hat * p->E_last_ * p->E_
-              * (1.0 - p->mu_ * p->mu_) / E_star);
-            double c = a_hat * (E0 - E_star);
-            double x_c_sq = c + b*b + X_EXP;
-            if (x_c_sq <= 0.0) continue;
-            double x_c = std::sqrt(x_c_sq);
-
-            double Er_min = E_star + std::pow(std::max(0.0, b-x_c), 2) / a_hat;
-            if (Er_min < E_star) Er_min = E_star;
-            if (Er_min < nuc->multipole_->E_min_)
-              Er_min = nuc->multipole_->E_min_;
-            double Er_max = E_star + (b + x_c)*(b + x_c) / a_hat;
-            if (Er_min < E_star) Er_min = E_star;
-            if (Er_max > nuc->multipole_->E_max_)
-              Er_max = nuc->multipole_->E_max_;
-            double dE = (Er_max - Er_min) / n_Er;
-
-            double Er = Er_min + 0.5 * dE;
-            double nuc_kern = 0.0;
-            double nuc_kern_deriv = 0.0;
-            for (int i = 0; i < n_Er-1; ++i) {
-              double sig_s, sig_a, sig_f;
-              std::tie(sig_s, sig_a, sig_f)
-                = nuc->multipole_->evaluate(Er, 0.0);
-              double eta_hat = ((nuc->awr_ + 1.0) / kT
-                * std::sqrt(p->E_last_ * p->E_ * (1.0 - p->mu_*p->mu_))
-                * std::sqrt(Er / E_star - 1.0));
-              double integrand = std::exp(-a_hat * (Er - E0) + eta_hat)
-                * sig_s * 0.5 * bessel_I0_exp(eta_hat) * dE;
-              nuc_kern += integrand;
-              nuc_kern_deriv += integrand * (a_hat * (Er - E0) - 1.5
-                - eta_hat * bessel_I1_exp(eta_hat) / bessel_I0_exp(eta_hat));
-              Er += dE;
-            }
-            mat_kern += H * nuc_kern;
-            mat_kern_deriv += H * nuc_kern_deriv / T;
+      bool kern_valid = (deriv.use_kern_deriv && p->E_last_ > deriv.kern_min_E
+        && p->E_last_ < deriv.kern_max_E);
+      if (kern_valid) {
+        if (!deriv.use_finite_diff) {
+          double kern, kern_deriv;
+          std::tie(kern, kern_deriv) = eval_scat_kern_deriv(*p);
+        } else {
+          double kern_mid = eval_scat_kern(*p, 0.0);
+          if (kern_mid > FP_PRECISION) {
+            double kern_hi = eval_scat_kern(*p, 5.0);
+            double kern_lo = eval_scat_kern(*p, -5.0);
+            deriv.flux_deriv += (kern_hi - kern_lo) / (10.0 * kern_mid);
           }
         }
-        if (mat_kern > 0.0) deriv.flux_deriv += mat_kern_deriv / mat_kern;
 
       } else {
         // Loop over the material's nuclides until we find the event nuclide.
