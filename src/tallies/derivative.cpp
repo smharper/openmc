@@ -674,7 +674,7 @@ eval_scat_kern(const openmc::Particle& p, double delta_T)
 
       double Er = Er_min + 0.5 * dE;
       double nuc_kern = 0.0;
-      for (int i = 0; i < n_Er-1; ++i) {
+      for (int i = 0; i < n_Er; ++i) {
         if (Er > nuc->multipole_->E_max_) break;
         if (!use_cxs)
           std::tie(sig_s, sig_a, sig_f) = nuc->multipole_->evaluate(Er, 0.0);
@@ -744,7 +744,7 @@ eval_scat_kern_deriv(const openmc::Particle& p)
       double Er = Er_min + 0.5 * dE;
       double nuc_kern = 0.0;
       double nuc_kern_deriv = 0.0;
-      for (int i = 0; i < n_Er-1; ++i) {
+      for (int i = 0; i < n_Er; ++i) {
         if (Er > nuc->multipole_->E_max_) break;
         if (!use_cxs)
           std::tie(sig_s, sig_a, sig_f) = nuc->multipole_->evaluate(Er, 0.0);
