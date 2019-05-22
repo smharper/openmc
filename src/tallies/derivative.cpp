@@ -759,7 +759,7 @@ eval_scat_kern_deriv(const openmc::Particle& p)
         Er += dE;
       }
       kern += H * nuc_kern;
-      kern_deriv += H * nuc_kern / T;
+      kern_deriv += H * nuc_kern_deriv / T;
     }
   }
   return {kern, kern_deriv};
@@ -811,6 +811,9 @@ void score_collision_derivative(const Particle* p)
         if (!deriv.use_finite_diff) {
           double kern, kern_deriv;
           std::tie(kern, kern_deriv) = eval_scat_kern_deriv(*p);
+          if (kern > FP_PRECISION) {
+            deriv.flux_deriv += kern_deriv / kern;
+          }
         } else {
           double kern_mid = eval_scat_kern(*p, 0.0);
           if (kern_mid > FP_PRECISION) {
