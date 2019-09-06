@@ -32,6 +32,9 @@ _dll.openmc_material_get_densities.argtypes = [
     POINTER(c_int)]
 _dll.openmc_material_get_densities.restype = c_int
 _dll.openmc_material_get_densities.errcheck = _error_handler
+_dll.openmc_material_get_density.argtypes = [c_int32, POINTER(c_double)]
+_dll.openmc_material_get_density.restype = c_int
+_dll.openmc_material_get_density.errcheck = _error_handler
 _dll.openmc_material_get_volume.argtypes = [c_int32, POINTER(c_double)]
 _dll.openmc_material_get_volume.restype = c_int
 _dll.openmc_material_get_volume.errcheck = _error_handler
@@ -45,6 +48,12 @@ _dll.openmc_material_set_densities.errcheck = _error_handler
 _dll.openmc_material_set_id.argtypes = [c_int32, c_int32]
 _dll.openmc_material_set_id.restype = c_int
 _dll.openmc_material_set_id.errcheck = _error_handler
+_dll.openmc_material_get_name.argtypes = [c_int32, POINTER(c_char_p)]
+_dll.openmc_material_get_name.restype = c_int
+_dll.openmc_material_get_name.errcheck = _error_handler
+_dll.openmc_material_set_name.argtypes = [c_int32, c_char_p]
+_dll.openmc_material_set_name.restype = c_int
+_dll.openmc_material_set_name.errcheck = _error_handler
 _dll.openmc_material_set_volume.argtypes = [c_int32, c_double]
 _dll.openmc_material_set_volume.restype = c_int
 _dll.openmc_material_set_volume.errcheck = _error_handler
@@ -122,6 +131,17 @@ class Material(_FortranObjectWithID):
         _dll.openmc_material_set_id(self._index, mat_id)
 
     @property
+    def name(self):
+        name = c_char_p()
+        _dll.openmc_material_get_name(self._index, name)
+        return name.value.decode()
+
+    @name.setter
+    def name(self, name):
+        name_ptr = c_char_p(name.encode())
+        _dll.openmc_material_set_name(self._index, name_ptr)
+
+    @property
     def volume(self):
         volume = c_double()
         try:
@@ -138,6 +158,15 @@ class Material(_FortranObjectWithID):
     def nuclides(self):
         return self._get_densities()[0]
         return nuclides
+
+    @property
+    def density(self):
+      density = c_double()
+      try:
+          _dll.openmc_material_get_density(self._index, density)
+      except OpenMCError:
+          return None
+      return density.value
 
     @property
     def densities(self):

@@ -41,7 +41,7 @@
     <bins>9</bins>
   </filter>
   <filter id="2" type="particle">
-    <bins>2</bins>
+    <bins>photon</bins>
   </filter>
   <tally id="1">
     <filters>1 2</filters>
@@ -49,17 +49,20 @@
   </tally>
   <tally id="2">
     <filters>2</filters>
-    <scores>total</scores>
+    <nuclides>Al27 total</nuclides>
+    <scores>total heating</scores>
     <estimator>tracklength</estimator>
   </tally>
   <tally id="3">
     <filters>2</filters>
-    <scores>total</scores>
+    <nuclides>Al27 total</nuclides>
+    <scores>total heating</scores>
     <estimator>collision</estimator>
   </tally>
   <tally id="4">
     <filters>2</filters>
-    <scores>total</scores>
+    <nuclides>Al27 total</nuclides>
+    <scores>total heating</scores>
     <estimator>analog</estimator>
   </tally>
 </tallies>

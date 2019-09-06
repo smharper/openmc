@@ -1,3 +1,5 @@
+import sys
+
 from contextlib import contextmanager
 from ctypes import (CDLL, c_bool, c_int, c_int32, c_int64, c_double, c_char_p,
                     c_char, POINTER, Structure, c_void_p, create_string_buffer)
@@ -48,6 +50,7 @@ _init_linsolver_argtypes = [_array_1d_int, c_int, _array_1d_int, c_int, c_int,
                             c_double, _array_1d_int, _array_1d_int]
 _dll.openmc_initialize_linsolver.argtypes = _init_linsolver_argtypes
 _dll.openmc_initialize_linsolver.restype = None
+_dll.openmc_is_statepoint_batch.restype = c_bool
 _dll.openmc_master.restype = c_bool
 _dll.openmc_next_batch.argtypes = [POINTER(c_int)]
 _dll.openmc_next_batch.restype = c_int
@@ -72,7 +75,25 @@ _dll.openmc_simulation_finalize.errcheck = _error_handler
 _dll.openmc_statepoint_write.argtypes = [c_char_p, POINTER(c_bool)]
 _dll.openmc_statepoint_write.restype = c_int
 _dll.openmc_statepoint_write.errcheck = _error_handler
+_dll.openmc_global_bounding_box.argtypes = [POINTER(c_double),
+                                            POINTER(c_double)]
+_dll.openmc_global_bounding_box.restype = c_int
+_dll.openmc_global_bounding_box.errcheck = _error_handler
 
+
+def global_bounding_box():
+    """Calculate a global bounding box for the model"""
+    inf = sys.float_info.max
+    llc = np.zeros(3)
+    urc = np.zeros(3)
+    _dll.openmc_global_bounding_box(llc.ctypes.data_as(POINTER(c_double)),
+                                    urc.ctypes.data_as(POINTER(c_double)))
+    llc[llc == inf] = np.inf
+    urc[urc == inf] = np.inf
+    llc[llc == -inf] = -np.inf
+    urc[urc == -inf] = -np.inf
+
+    return llc, urc
 
 def calculate_volumes():
     """Run stochastic volume calculation"""
@@ -187,6 +208,18 @@ def init(args=None, intracomm=None):
     _dll.openmc_init(argc, argv, intracomm)
 
 
+def is_statepoint_batch():
+    """Return whether statepoint will be written in current batch or not.
+
+    Returns
+    -------
+    bool
+        Whether is statepoint batch or not
+
+    """
+    return _dll.openmc_is_statepoint_batch()
+
+
 def iter_batches():
     """Iterator over batches.
 
@@ -230,18 +263,9 @@ def keff():
         Mean k-eigenvalue and standard deviation of the mean
 
     """
-    n = openmc.capi.num_realizations()
-    if n > 3:
-        # Use the combined estimator if there are enough realizations
-        k = (c_double*2)()
-        _dll.openmc_get_keff(k)
-        return tuple(k)
-    else:
-        # Otherwise, return the tracklength estimator
-        mean = c_double.in_dll(_dll, 'keff').value
-        std_dev = c_double.in_dll(_dll, 'keff_std').value \
-                  if n > 1 else np.inf
-        return (mean, std_dev)
+    k = (c_double*2)()
+    _dll.openmc_get_keff(k)
+    return tuple(k)
 
 
 def master():

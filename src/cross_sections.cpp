@@ -239,8 +239,7 @@ read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
       already_read.insert(name);
 
       // Check if elemental data has been read, if needed
-      int pos = name.find_first_of("0123456789");
-      std::string element = name.substr(0, pos);
+      std::string element = to_element(name);
       if (settings::photon_transport) {
         if (already_read.find(element) == already_read.end()) {
           // Read photon interaction data from HDF5 photon library
@@ -358,6 +357,12 @@ read_ce_cross_sections(const std::vector<std::vector<double>>& nuc_temps,
     }
   }
 
+  // Show minimum/maximum temperature
+  write_message("Minimum neutron data temperature: " +
+    std::to_string(data::temperature_min) + " K", 4);
+  write_message("Maximum neutron data temperature: " +
+    std::to_string(data::temperature_max) + " K", 4);
+
   // If the user wants multipole, make sure we found a multipole library.
   if (settings::temperature_multipole) {
     bool mp_found = false;
@@ -403,6 +408,10 @@ void read_ce_cross_sections_xml()
     // If no directory is listed in cross_sections.xml, by default select the
     // directory in which the cross_sections.xml file resides
     auto pos = filename.rfind("/");
+    if (pos == std::string::npos) {
+      // no '/' found, probably a Windows directory
+      pos = filename.rfind("\\");
+    }
     directory = filename.substr(0, pos);
   }
 

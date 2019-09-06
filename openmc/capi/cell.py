@@ -1,3 +1,5 @@
+import sys
+
 from collections.abc import Mapping, Iterable
 from ctypes import c_int, c_int32, c_double, c_char_p, POINTER
 from weakref import WeakValueDictionary
@@ -24,6 +26,16 @@ _dll.openmc_cell_get_fill.argtypes = [
     c_int32, POINTER(c_int), POINTER(POINTER(c_int32)), POINTER(c_int32)]
 _dll.openmc_cell_get_fill.restype = c_int
 _dll.openmc_cell_get_fill.errcheck = _error_handler
+_dll.openmc_cell_get_temperature.argtypes = [
+    c_int32, POINTER(c_int32), POINTER(c_double)]
+_dll.openmc_cell_get_temperature.restype = c_int
+_dll.openmc_cell_get_temperature.errcheck = _error_handler
+_dll.openmc_cell_get_name.argtypes = [c_int32, POINTER(c_char_p)]
+_dll.openmc_cell_get_name.restype = c_int
+_dll.openmc_cell_get_name.errcheck = _error_handler
+_dll.openmc_cell_set_name.argtypes = [c_int32, c_char_p]
+_dll.openmc_cell_set_name.restype = c_int
+_dll.openmc_cell_set_name.errcheck = _error_handler
 _dll.openmc_cell_set_fill.argtypes = [
     c_int32, c_int, c_int32, POINTER(c_int32)]
 _dll.openmc_cell_set_fill.restype = c_int
@@ -39,6 +51,11 @@ _dll.openmc_get_cell_index.argtypes = [c_int32, POINTER(c_int32)]
 _dll.openmc_get_cell_index.restype = c_int
 _dll.openmc_get_cell_index.errcheck = _error_handler
 _dll.cells_size.restype = c_int
+_dll.openmc_cell_bounding_box.argtypes = [c_int,
+                                          POINTER(c_double),
+                                          POINTER(c_double)]
+_dll.openmc_cell_bounding_box.restype = c_int
+_dll.openmc_cell_bounding_box.errcheck = _error_handler
 
 
 class Cell(_FortranObjectWithID):
@@ -99,6 +116,17 @@ class Cell(_FortranObjectWithID):
         _dll.openmc_cell_set_id(self._index, cell_id)
 
     @property
+    def name(self):
+        name = c_char_p()
+        _dll.openmc_cell_get_name(self._index, name)
+        return name.value.decode()
+
+    @name.setter
+    def name(self, name):
+        name_ptr = c_char_p(name.encode())
+        _dll.openmc_cell_set_name(self._index, name_ptr)
+
+    @property
     def fill(self):
         fill_type = c_int()
         indices = POINTER(c_int32)()
@@ -128,6 +156,23 @@ class Cell(_FortranObjectWithID):
             indices = (c_int32*1)(-1)
             _dll.openmc_cell_set_fill(self._index, 1, 1, indices)
 
+    def get_temperature(self, instance=None):
+        """Get the temperature of a cell
+
+        Parameters
+        ----------
+        instance: int or None
+            Which instance of the cell
+
+        """
+
+        if instance is not None:
+            instance = c_int32(instance)
+
+        T = c_double()
+        _dll.openmc_cell_get_temperature(self._index, instance, T)
+        return T.value
+
     def set_temperature(self, T, instance=None):
         """Set the temperature of a cell
 
@@ -139,8 +184,26 @@ class Cell(_FortranObjectWithID):
             Which instance of the cell
 
         """
-        _dll.openmc_cell_set_temperature(self._index, T, c_int32(instance))
 
+        if instance is not None:
+            instance = c_int32(instance)
+
+        _dll.openmc_cell_set_temperature(self._index, T, instance)
+
+    @property
+    def bounding_box(self):
+        inf = sys.float_info.max
+        llc = np.zeros(3)
+        urc = np.zeros(3)
+        _dll.openmc_cell_bounding_box(self._index,
+                                 llc.ctypes.data_as(POINTER(c_double)),
+                                 urc.ctypes.data_as(POINTER(c_double)))
+        llc[llc == inf] = np.inf
+        urc[urc == inf] = np.inf
+        llc[llc == -inf] = -np.inf
+        urc[urc == -inf] = -np.inf
+
+        return llc, urc
 
 class _CellMapping(Mapping):
     def __getitem__(self, key):

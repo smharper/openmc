@@ -34,6 +34,14 @@ namespace openmc {
 //==============================================================================
 
 void
+LocalCoord::rotate(const std::vector<double>& rotation)
+{
+  this->r = this->r.rotate(rotation);
+  this->u = this->u.rotate(rotation);
+  this->rotated = true;
+}
+
+void
 LocalCoord::reset()
 {
   cell = C_NONE;
@@ -41,6 +49,7 @@ LocalCoord::reset()
   lattice = C_NONE;
   lattice_x = 0;
   lattice_y = 0;
+  lattice_z = 0;
   rotated = false;
 }
 
@@ -73,7 +82,7 @@ Particle::clear()
 }
 
 void
-Particle::create_secondary(Direction u, double E, Type type) const
+Particle::create_secondary(Direction u, double E, Type type)
 {
   simulation::secondary_bank.emplace_back();
 
@@ -83,6 +92,8 @@ Particle::create_secondary(Direction u, double E, Type type) const
   bank.r = this->r();
   bank.u = u;
   bank.E = settings::run_CE ? E : g_;
+
+  n_bank_second_ += 1;
 }
 
 void
@@ -156,6 +167,11 @@ Particle::transport()
     E_last_ = E_;
     u_last_ = this->u();
     r_last_ = this->r();
+
+    // Reset event variables
+    event_ = EVENT_KILL;
+    event_nuclide_ = NUCLIDE_NONE;
+    event_mt_ = REACTION_NONE;
 
     // If the cell hasn't been determined based on the particle's location,
     // initiate a search for the current cell. This generally happens at the
@@ -309,6 +325,7 @@ Particle::transport()
 
       // Reset banked weight during collision
       n_bank_ = 0;
+      n_bank_second_ = 0;
       wgt_bank_ = 0.0;
       for (int& v : n_delayed_bank_) v = 0;
 
@@ -329,9 +346,7 @@ Particle::transport()
           // If next level is rotated, apply rotation matrix
           const auto& m {model::cells[coord_[j].cell]->rotation_};
           const auto& u {coord_[j].u};
-          coord_[j + 1].u.x = m[3]*u.x + m[4]*u.y + m[5]*u.z;
-          coord_[j + 1].u.y = m[6]*u.x + m[7]*u.y + m[8]*u.z;
-          coord_[j + 1].u.z = m[9]*u.x + m[10]*u.y + m[11]*u.z;
+          coord_[j + 1].u = u.rotate(m);
         } else {
           // Otherwise, copy this level's direction
           coord_[j+1].u = coord_[j].u;
@@ -363,6 +378,10 @@ Particle::transport()
       if (write_track_) add_particle_track();
     }
   }
+
+  #ifdef DAGMC
+  if (settings::dagmc) simulation::history.reset();
+  #endif
 
   // Finish particle track output.
   if (write_track_) {
@@ -452,12 +471,14 @@ Particle::cross_surface()
     // If a reflective surface is coincident with a lattice or universe
     // boundary, it is necessary to redetermine the particle's coordinates in
     // the lower universes.
-
-    n_coord_ = 1;
-    if (!find_cell(this, true)) {
-      this->mark_as_lost("Couldn't find particle after reflecting from surface "
-        + std::to_string(surf->id_) + ".");
-      return;
+    // (unless we're using a dagmc model, which has exactly one universe)
+    if (!settings::dagmc) {
+      n_coord_ = 1;
+      if (!find_cell(this, true)) {
+        this->mark_as_lost("Couldn't find particle after reflecting from surface "
+                           + std::to_string(surf->id_) + ".");
+        return;
+      }
     }
 
     // Set previous coordinate going slightly past surface crossing

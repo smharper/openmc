@@ -35,6 +35,14 @@ def pincell_model():
     zernike_tally.scores = ['fission']
     pincell.tallies.append(zernike_tally)
 
+    # Add an energy function tally
+    energyfunc_tally = openmc.Tally()
+    energyfunc_filter = openmc.EnergyFunctionFilter(
+        [0.0, 20e6], [0.0, 20e6])
+    energyfunc_tally.scores = ['fission']
+    energyfunc_tally.filters = [energyfunc_filter]
+    pincell.tallies.append(energyfunc_tally)
+
     # Write XML files in tmpdir
     with cdtemp():
         pincell.export_to_xml()
@@ -42,8 +50,8 @@ def pincell_model():
 
 
 @pytest.fixture(scope='module')
-def capi_init(pincell_model):
-    openmc.capi.init()
+def capi_init(pincell_model, mpi_intracomm):
+    openmc.capi.init(intracomm=mpi_intracomm)
     yield
     openmc.capi.finalize()
 
@@ -73,6 +81,16 @@ def test_cell(capi_init):
     assert isinstance(cell.fill, openmc.capi.Material)
     cell.fill = openmc.capi.materials[1]
     assert str(cell) == 'Cell[0]'
+    assert cell.name == "Fuel"
+    cell.name = "Not fuel"
+    assert cell.name == "Not fuel"
+
+def test_cell_temperature(capi_init):
+    cell = openmc.capi.cells[1]
+    cell.set_temperature(100.0, 0)
+    assert cell.get_temperature(0) == 100.0
+    cell.set_temperature(200)
+    assert cell.get_temperature() == 200.0
 
 
 def test_new_cell(capi_init):
@@ -105,12 +123,24 @@ def test_material(capi_init):
     m.volume = 10.0
     assert m.volume == 10.0
 
-    with pytest.raises(exc.InvalidArgumentError):
+    with pytest.raises(exc.OpenMCError):
         m.set_density(1.0, 'goblins')
 
     rho = 2.25e-2
     m.set_density(rho)
     assert sum(m.densities) == pytest.approx(rho)
+
+    m.set_density(0.1, 'g/cm3')
+    assert m.density == pytest.approx(0.1)
+    assert m.name == "Hot borated water"
+    m.name = "Not hot borated water"
+    assert m.name == "Not hot borated water"
+
+def test_material_add_nuclide(capi_init):
+    m = openmc.capi.materials[3]
+    m.add_nuclide('Xe135', 1e-12)
+    assert m.nuclides[-1] == 'Xe135'
+    assert m.densities[-1] == 1e-12
 
 
 def test_new_material(capi_init):
@@ -124,7 +154,7 @@ def test_new_material(capi_init):
 def test_nuclide_mapping(capi_init):
     nucs = openmc.capi.nuclides
     assert isinstance(nucs, Mapping)
-    assert len(nucs) == 12
+    assert len(nucs) == 13
     for name, nuc in nucs.items():
         assert isinstance(nuc, openmc.capi.Nuclide)
         assert name == nuc.name
@@ -148,10 +178,19 @@ def test_settings(capi_init):
 def test_tally_mapping(capi_init):
     tallies = openmc.capi.tallies
     assert isinstance(tallies, Mapping)
-    assert len(tallies) == 2
+    assert len(tallies) == 3
     for tally_id, tally in tallies.items():
         assert isinstance(tally, openmc.capi.Tally)
         assert tally_id == tally.id
+
+
+def test_energy_function_filter(capi_init):
+    """Test special __new__ and __init__ for EnergyFunctionFilter"""
+    efunc = openmc.capi.EnergyFunctionFilter([0.0, 1.0], [0.0, 2.0])
+    assert len(efunc.energy) == 2
+    assert (efunc.energy == [0.0, 1.0]).all()
+    assert len(efunc.y) == 2
+    assert (efunc.y == [0.0, 2.0]).all()
 
 
 def test_tally(capi_init):
@@ -189,6 +228,16 @@ def test_tally(capi_init):
     assert len(t2.filters[1].bins) == 3
     assert t2.filters[0].order == 5
 
+    t3 = openmc.capi.tallies[3]
+    assert len(t3.filters) == 1
+    t3_f = t3.filters[0]
+    assert isinstance(t3_f, openmc.capi.EnergyFunctionFilter)
+    assert len(t3_f.energy) == 2
+    assert len(t3_f.y) == 2
+    t3_f.set_data([0.0, 1.0, 2.0], [0.0, 1.0, 4.0])
+    assert len(t3_f.energy) == 3
+    assert len(t3_f.y) == 3
+
 
 def test_new_tally(capi_init):
     with pytest.raises(exc.AllocationError):
@@ -197,7 +246,7 @@ def test_new_tally(capi_init):
     new_tally.scores = ['flux']
     new_tally_with_id = openmc.capi.Tally(10)
     new_tally_with_id.scores = ['flux']
-    assert len(openmc.capi.tallies) == 4
+    assert len(openmc.capi.tallies) == 5
 
 
 def test_tally_activate(capi_simulation_init):
@@ -325,11 +374,11 @@ def test_find_material(capi_init):
 
 
 def test_mesh(capi_init):
-    mesh = openmc.capi.Mesh()
+    mesh = openmc.capi.RegularMesh()
     mesh.dimension = (2, 3, 4)
     assert mesh.dimension == (2, 3, 4)
     with pytest.raises(exc.AllocationError):
-        mesh2 = openmc.capi.Mesh(mesh.id)
+        mesh2 = openmc.capi.RegularMesh(mesh.id)
 
     # Make sure each combination of parameters works
     ll = (0., 0., 0.)
@@ -349,7 +398,7 @@ def test_mesh(capi_init):
     assert isinstance(meshes, Mapping)
     assert len(meshes) == 1
     for mesh_id, mesh in meshes.items():
-        assert isinstance(mesh, openmc.capi.Mesh)
+        assert isinstance(mesh, openmc.capi.RegularMesh)
         assert mesh_id == mesh.id
 
     mf = openmc.capi.MeshFilter(mesh)
@@ -359,11 +408,11 @@ def test_mesh(capi_init):
     assert msf.mesh == mesh
 
 
-def test_restart(capi_init):
+def test_restart(capi_init, mpi_intracomm):
     # Finalize and re-init to make internal state consistent with XML.
     openmc.capi.hard_reset()
     openmc.capi.finalize()
-    openmc.capi.init()
+    openmc.capi.init(intracomm=mpi_intracomm)
     openmc.capi.simulation_init()
 
     # Run for 7 batches then write a statepoint.
@@ -451,3 +500,13 @@ def test_position(capi_init):
     pos[2] = 3.3
 
     assert tuple(pos) == (1.3, 2.3, 3.3)
+
+
+def test_global_bounding_box(capi_init):
+    expected_llc = (-0.63, -0.63, -np.inf)
+    expected_urc = (0.63, 0.63, np.inf)
+
+    llc, urc = openmc.capi.global_bounding_box()
+
+    assert tuple(llc) == expected_llc
+    assert tuple(urc) == expected_urc

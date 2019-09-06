@@ -35,7 +35,7 @@ list <https://groups.google.com/forum/?fromgroups=#!forum/openmc-users>`_.
 
     quickinstall
     examples/index
-    releasenotes
+    releasenotes/index
     methods/index
     usersguide/index
     devguide/index
@@ -44,4 +44,3 @@ list <https://groups.google.com/forum/?fromgroups=#!forum/openmc-users>`_.
     io_formats/index
     publications
     license
-    developers

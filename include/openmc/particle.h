@@ -9,6 +9,7 @@
 #include <memory> // for unique_ptr
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "openmc/constants.h"
 #include "openmc/position.h"
@@ -38,7 +39,13 @@ constexpr double CACHE_INVALID {-1.0};
 // Class declarations
 //==============================================================================
 
-struct LocalCoord {
+class LocalCoord {
+public:
+  void rotate(const std::vector<double>& rotation);
+
+  //! clear data from a single coordinate level
+  void reset();
+
   Position r; //!< particle position
   Direction u; //!< particle direction
   int cell {-1};
@@ -48,9 +55,6 @@ struct LocalCoord {
   int lattice_y {-1};
   int lattice_z {-1};
   bool rotated {false};  //!< Is the level rotated?
-
-  //! clear data from a single coordinate level
-  void reset();
 };
 
 //==============================================================================
@@ -184,7 +188,7 @@ public:
   //! \param u Direction of the secondary particle
   //! \param E Energy of the secondary particle in [eV]
   //! \param type Particle type
-  void create_secondary(Direction u, double E, Type type) const;
+  void create_secondary(Direction u, double E, Type type);
 
   //! initialize from a source site
   //
@@ -261,6 +265,7 @@ public:
 
   // Post-collision physical data
   int n_bank_ {0};        //!< number of fission sites banked
+  int n_bank_second_ {0}; //!< number of secondary particles banked
   double wgt_bank_ {0.0}; //!< weight of fission sites banked
   int n_delayed_bank_[MAX_DELAYED_GROUPS];  //!< number of delayed fission
                                             //!< sites banked

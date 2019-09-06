@@ -73,6 +73,17 @@ Functions
    :return: Return status (negative if an error occurred)
    :rtype: int
 
+.. c:function:: int openmc_cell_get_temperature(int32_t index, const int32_t* instance, double* T)
+
+   Get the temperature of a cell
+
+   :param int32_t index: Index in the cells array
+   :param int32_t* instance: Which instance of the cell. If a null pointer is passed, the temperature
+                             of the first instance is returned.
+   :param double* T: temperature of the cell
+   :return: Return status (negative if an error occurred)
+   :rtype: int
+
 .. c:function:: int openmc_cell_set_fill(int32_t index, int type, int32_t n, const int32_t* indices)
 
    Set the fill for a cell
@@ -321,6 +332,15 @@ Functions
    :param int** nuclides: Pointer to array of nuclide indices
    :param double** densities: Pointer to the array of densities
    :param int* n: Length of the array
+   :return: Return status (negative if an error occurs)
+   :rtype: int
+
+.. c:function:: int openmc_material_get_density(int32_t index, double* density)
+
+   Get density of a material.
+
+   :param int32_t index: Index in the materials array
+   :param double* denity: Pointer to a density
    :return: Return status (negative if an error occurs)
    :rtype: int
 

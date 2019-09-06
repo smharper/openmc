@@ -36,7 +36,7 @@ _dll.openmc_tally_get_id.argtypes = [c_int32, POINTER(c_int32)]
 _dll.openmc_tally_get_id.restype = c_int
 _dll.openmc_tally_get_id.errcheck = _error_handler
 _dll.openmc_tally_get_filters.argtypes = [
-    c_int32, POINTER(POINTER(c_int32)), POINTER(c_int)]
+    c_int32, POINTER(POINTER(c_int32)), POINTER(c_size_t)]
 _dll.openmc_tally_get_filters.restype = c_int
 _dll.openmc_tally_get_filters.errcheck = _error_handler
 _dll.openmc_tally_get_n_realizations.argtypes = [c_int32, POINTER(c_int32)]
@@ -63,7 +63,7 @@ _dll.openmc_tally_results.errcheck = _error_handler
 _dll.openmc_tally_set_active.argtypes = [c_int32, c_bool]
 _dll.openmc_tally_set_active.restype = c_int
 _dll.openmc_tally_set_active.errcheck = _error_handler
-_dll.openmc_tally_set_filters.argtypes = [c_int32, c_int, POINTER(c_int32)]
+_dll.openmc_tally_set_filters.argtypes = [c_int32, c_size_t, POINTER(c_int32)]
 _dll.openmc_tally_set_filters.restype = c_int
 _dll.openmc_tally_set_filters.errcheck = _error_handler
 _dll.openmc_tally_set_estimator.argtypes = [c_int32, c_char_p]
@@ -89,7 +89,7 @@ _SCORES = {
     -5: 'absorption', -6: 'fission', -7: 'nu-fission', -8: 'kappa-fission',
     -9: 'current', -10: 'events', -11: 'delayed-nu-fission',
     -12: 'prompt-nu-fission', -13: 'inverse-velocity', -14: 'fission-q-prompt',
-    -15: 'fission-q-recoverable', -16: 'decay-rate'
+    -15: 'fission-q-recoverable', -16: 'decay-rate', -17: 'heating'
 }
 _ESTIMATORS = {
     1: 'analog', 2: 'tracklength', 3: 'collision'
@@ -249,7 +249,7 @@ class Tally(_FortranObjectWithID):
     @property
     def filters(self):
         filt_idx = POINTER(c_int32)()
-        n = c_int()
+        n = c_size_t()
         _dll.openmc_tally_get_filters(self._index, filt_idx, n)
         return [_get_filter(filt_idx[i]) for i in range(n.value)]
 
