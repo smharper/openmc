@@ -806,7 +806,7 @@ void score_collision_derivative(const Particle* p)
 
     case DIFF_TEMPERATURE:
       bool kern_valid = (deriv.use_kern_deriv && p->E_last_ > deriv.kern_min_E
-        && p->E_last_ < deriv.kern_max_E);
+        && p->E_last_ < deriv.kern_max_E && p->mu_ < 0.9);
       if (kern_valid) {
         if (!deriv.use_finite_diff) {
           double kern, kern_deriv;
