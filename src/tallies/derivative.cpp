@@ -806,7 +806,11 @@ void score_collision_derivative(const Particle* p)
 
     case DIFF_TEMPERATURE:
       bool kern_valid = (deriv.use_kern_deriv && p->E_last_ > deriv.kern_min_E
-        && p->E_last_ < deriv.kern_max_E && p->mu_ < 0.9);
+        && p->E_last_ < deriv.kern_max_E);
+      double kT = p->sqrtkT_ * p->sqrtkT_;
+      if (p->E_last_ > FREE_GAS_THRESHOLD * kT
+        && !data::nuclides[p->event_nuclide_]->resonant_) kern_valid = false;
+
       if (kern_valid) {
         if (!deriv.use_finite_diff) {
           double kern, kern_deriv;
@@ -819,10 +823,10 @@ void score_collision_derivative(const Particle* p)
           if (kern_mid > FP_PRECISION) {
             double kern_hi = eval_scat_kern(*p, 5.0);
             double kern_lo = eval_scat_kern(*p, -5.0);
-            double T = p->sqrtkT_ * p->sqrtkT_ / K_BOLTZMANN;
-            kern_hi *= std::sqrt(T + 5);
-            kern_mid *= std::sqrt(T);
-            kern_lo *= std::sqrt(T - 5);
+            //double T = p->sqrtkT_ * p->sqrtkT_ / K_BOLTZMANN;
+            //kern_hi *= std::sqrt(T + 5);
+            //kern_mid *= std::sqrt(T);
+            //kern_lo *= std::sqrt(T - 5);
             deriv.flux_deriv += (kern_hi - kern_lo) / (10.0 * kern_mid);
           }
         }
