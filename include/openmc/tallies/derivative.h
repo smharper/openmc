@@ -17,7 +17,7 @@ namespace openmc {
 struct TallyDerivative {
   int id;  //!< User-defined identifier
   int variable;  //!< Independent variable (like temperature)
-  int diff_material;  //!< Material this derivative is applied to
+  std::vector<int32_t> diff_materials;  //! Materials this deriv is applied to
   int diff_nuclide;  //!< Nuclide this material is applied to
   double flux_deriv;  //!< Derivative of the current particle's weight
 

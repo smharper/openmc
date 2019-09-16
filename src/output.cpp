@@ -653,19 +653,16 @@ write_tallies()
     // Write derivative information.
     if (tally.deriv_ != C_NONE) {
       const auto& deriv {model::tally_derivs[tally.deriv_]};
+      tallies_out << " Derivative " << deriv.id;
       switch (deriv.variable) {
       case DIFF_DENSITY:
-        tallies_out << " Density derivative  Material "
-          << std::to_string(deriv.diff_material) << "\n";
+        tallies_out << " (density)\n";
         break;
       case DIFF_NUCLIDE_DENSITY:
-        tallies_out << " Nuclide density derivative  Material "
-          << std::to_string(deriv.diff_material) << "  Nuclide "
-          << data::nuclides[deriv.diff_nuclide]->name_ << "\n";
+        tallies_out << " (nuclide density)\n";
         break;
       case DIFF_TEMPERATURE:
-        tallies_out << " Temperature derivative  Material "
-          << std::to_string(deriv.diff_material) << "\n";
+        tallies_out << " (temperature)\n";
         break;
       default:
         fatal_error("Differential tally dependent variable for tally "

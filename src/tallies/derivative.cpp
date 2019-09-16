@@ -1,5 +1,6 @@
 #include "openmc/tallies/derivative.h"
 
+#include "openmc/container_util.h"
 #include "openmc/error.h"
 #include "openmc/material.h"
 #include "openmc/nuclide.h"
@@ -71,7 +72,7 @@ TallyDerivative::TallyDerivative(pugi::xml_node node)
     fatal_error(out);
   }
 
-  diff_material = std::stoi(get_node_value(node, "material"));
+  diff_materials = get_node_array<int32_t>(node, "materials");
 }
 
 //==============================================================================
@@ -131,7 +132,7 @@ apply_derivative_to_score(const Particle* p, int i_tally, int i_nuclide,
     return;
   }
   const Material& material {*model::materials[p->material_]};
-  if (material.id_ != deriv.diff_material) {
+  if (!contains(deriv.diff_materials, material.id_)) {
     score *= flux_deriv;
     return;
   }
@@ -574,7 +575,7 @@ score_track_derivative(const Particle* p, double distance)
   const Material& material {*model::materials[p->material_]};
 
   for (auto& deriv : model::tally_derivs) {
-    if (deriv.diff_material != material.id_) continue;
+    if (!contains(deriv.diff_materials, material.id_)) continue;
 
     switch (deriv.variable) {
 
@@ -620,7 +621,7 @@ void score_collision_derivative(const Particle* p)
   const Material& material {*model::materials[p->material_]};
 
   for (auto& deriv : model::tally_derivs) {
-    if (deriv.diff_material != material.id_) continue;
+    if (!contains(deriv.diff_materials, material.id_)) continue;
 
     switch (deriv.variable) {
 

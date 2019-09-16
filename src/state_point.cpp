@@ -115,7 +115,7 @@ openmc_statepoint_write(const char* filename, bool* write_source)
       for (const auto& deriv : model::tally_derivs) {
         hid_t deriv_group = create_group(derivs_group,
           "derivative " + std::to_string(deriv.id));
-        write_dataset(deriv_group, "material", deriv.diff_material);
+        write_dataset(deriv_group, "materials", deriv.diff_materials);
         if (deriv.variable == DIFF_DENSITY) {
           write_dataset(deriv_group, "independent variable", "density");
         } else if (deriv.variable == DIFF_NUCLIDE_DENSITY) {
