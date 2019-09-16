@@ -811,47 +811,31 @@ void score_collision_derivative(const Particle* p)
       if (p->E_last_ > FREE_GAS_THRESHOLD * kT
         && !data::nuclides[p->event_nuclide_]->resonant_) kern_valid = false;
 
-      if (kern_valid) {
-        if (!deriv.use_finite_diff) {
-          double kern, kern_deriv;
-          std::tie(kern, kern_deriv) = eval_scat_kern_deriv(*p);
-          if (kern > FP_PRECISION) {
-            deriv.flux_deriv += kern_deriv / kern;
-          }
-        } else {
-          double kern_mid = eval_scat_kern(*p, 0.0);
-          if (kern_mid > FP_PRECISION) {
-            double kern_hi = eval_scat_kern(*p, 5.0);
-            double kern_lo = eval_scat_kern(*p, -5.0);
-            //double T = p->sqrtkT_ * p->sqrtkT_ / K_BOLTZMANN;
-            //kern_hi *= std::sqrt(T + 5);
-            //kern_mid *= std::sqrt(T);
-            //kern_lo *= std::sqrt(T - 5);
-            deriv.flux_deriv += (kern_hi - kern_lo) / (10.0 * kern_mid);
-          }
-        }
+      const auto& nuc {*data::nuclides[p->event_nuclide_]};
+      if (multipole_in_range(&nuc, p->E_last_)) {
+        double dsig_s, dsig_a, dsig_f;
+        std::tie(dsig_s, dsig_a, dsig_f)
+          = nuc.multipole_->evaluate_deriv(p->E_last_, p->sqrtkT_);
+        if (dsig_s != 0.0) {
+          if (kern_valid) {
+            if (!deriv.use_finite_diff) {
+              double kern, kern_deriv;
+              std::tie(kern, kern_deriv) = eval_scat_kern_deriv(*p);
+              if (kern > FP_PRECISION) {
+                deriv.flux_deriv += kern_deriv / kern;
+              }
+            } else {
+              double kern_mid = eval_scat_kern(*p, 0.0);
+              if (kern_mid > FP_PRECISION) {
+                double kern_hi = eval_scat_kern(*p, 5.0);
+                double kern_lo = eval_scat_kern(*p, -5.0);
+                deriv.flux_deriv += (kern_hi - kern_lo) / (10.0 * kern_mid);
+              }
+            }
 
-      } else {
-        // Loop over the material's nuclides until we find the event nuclide.
-        for (auto i_nuc : material.nuclide_) {
-          const auto& nuc {*data::nuclides[i_nuc]};
-          if (i_nuc == p->event_nuclide_
-              && multipole_in_range(&nuc, p->E_last_)) {
-            // phi is proportional to Sigma_s
-            // (1 / phi) * (d_phi / d_T) = (d_Sigma_s / d_T) / Sigma_s
-            // (1 / phi) * (d_phi / d_T) = (d_sigma_s / d_T) / sigma_s
-            const auto& micro_xs {p->neutron_xs_[i_nuc]};
-            double dsig_s, dsig_a, dsig_f;
-            std::tie(dsig_s, dsig_a, dsig_f)
-              = nuc.multipole_->evaluate_deriv(p->E_last_, p->sqrtkT_);
+          } else {
+            const auto& micro_xs {p->neutron_xs_[p->event_nuclide_]};
             deriv.flux_deriv += dsig_s / (micro_xs.total - micro_xs.absorption);
-            // Note that this is an approximation!  The real scattering cross
-            // section is
-            // Sigma_s(E'->E, u'->u) = Sigma_s(E') * P(E'->E, u'->u).
-            // We are assuming that d_P(E'->E, u'->u) / d_T = 0 and only
-            // computing d_S(E') / d_T.  Using this approximation in the
-            // vicinity of low-energy resonances causes errors (~2-5% for PWR
-            // pincell eigenvalue derivatives).
           }
         }
       }
