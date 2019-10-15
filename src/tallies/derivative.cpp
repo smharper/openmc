@@ -629,7 +629,7 @@ double
 eval_scat_kern(const openmc::Particle& p, double delta_T)
 {
   constexpr double X_EXP {30};
-  constexpr int n_Er {2000};
+  constexpr int n_Er {200};
   constexpr bool use_cxs {false};
 
   double sqrtkT = std::sqrt(p.sqrtkT_*p.sqrtkT_ + K_BOLTZMANN*delta_T);
@@ -765,6 +765,30 @@ eval_scat_kern_deriv(const openmc::Particle& p)
   return {kern, kern_deriv};
 }
 
+double
+eval_scat_kern_cxs(const openmc::Particle& p, double delta_T)
+{
+  double sqrtkT = std::sqrt(p.sqrtkT_*p.sqrtkT_ + K_BOLTZMANN*delta_T);
+  double kT = sqrtkT * sqrtkT;
+
+  double kern = 0.0;
+
+  const auto& mat = model::materials[p.material_];
+  for (int l = 0; l < mat->nuclide_.size(); ++l) {
+    const auto& nuc = data::nuclides[mat->nuclide_[l]];
+    double beta = (1.0 + nuc->awr_) / nuc->awr_;
+    double Delta = (p.E_ - p.E_last_) / kT;
+    double D = (p.E_last_ + p.E_ - 2.0 * std::sqrt(p.E_last_ * p.E_) * p.mu_)
+      / (nuc->awr_ * kT);
+    double sig_s = p.neutron_xs_[mat->nuclide_[l]].elastic;
+    kern += beta * beta / (4.0 * kT * SQRT_PI)
+      * std::sqrt(p.E_ / (p.E_last_ * D))
+      * std::exp(-(Delta + D)*(Delta + D) / (4.0 * D))
+      * sig_s * mat->atom_density_(l);
+  }
+  return kern;
+}
+
 void score_collision_derivative(const Particle* p)
 {
   // A void material cannot be perturbed so it will not affect flux derivatives.
@@ -819,10 +843,10 @@ void score_collision_derivative(const Particle* p)
             deriv.flux_deriv += kern_deriv / kern;
           }
         } else {
-          double kern_mid = eval_scat_kern(*p, 0.0);
+          double kern_mid = eval_scat_kern_cxs(*p, 0.0);
           if (kern_mid > FP_PRECISION) {
-            double kern_hi = eval_scat_kern(*p, 5.0);
-            double kern_lo = eval_scat_kern(*p, -5.0);
+            double kern_hi = eval_scat_kern_cxs(*p, 5.0);
+            double kern_lo = eval_scat_kern_cxs(*p, -5.0);
             //double T = p->sqrtkT_ * p->sqrtkT_ / K_BOLTZMANN;
             //kern_hi *= std::sqrt(T + 5);
             //kern_mid *= std::sqrt(T);

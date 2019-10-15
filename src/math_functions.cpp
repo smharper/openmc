@@ -890,7 +890,7 @@ std::complex<double> w_derivative(std::complex<double> z, int order)
 double bessel_I0_exp(double x)
 {
   constexpr int MAX_N_TERMS {20};
-  constexpr double TOL {1e-10};
+  constexpr double TOL {1e-6};
 
   if (x == 0.0) {
     return 1.0;
