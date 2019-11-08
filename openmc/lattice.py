@@ -742,6 +742,50 @@ class RectLattice(Lattice):
             x, y, z = idx
             return (z, max_y - y, x)
 
+    def is_2fold_rot_symmetric(self, key=None):
+        # If no key function is given, default to one that extracts the id
+        # of the sub-universe.
+        if key is None:
+            key = lambda univ: univ.id
+
+        # Define a generator for x indices that are symmetric about the x-axis.
+        def yield_C2_x_inds():
+            half_nx = (self.shape[0] // 2) + (self.shape[0] % 2)
+            for ix in range(half_nx):
+                jx = self.shape[0] - ix - 1
+                yield ix, jx
+
+        # Define a generator for (y, x) indices that are 180 symmetric in the
+        # xy plane.
+        def yield_C2_xy_inds():
+            for iy in range(self.shape[1]):
+                jy = self.shape[1] - iy - 1
+                for (ix, jx) in yield_C2_x_inds():
+                    yield (iy, ix), (jy, jx)
+
+        # Define a generator for (z, y, x) indices that are 180 symmetric in
+        # each xy plane along the z-axis.
+        def yield_C2_xyz_inds():
+            for iz in range(self.shape[2]):
+                for (iy, ix), (jy, jx) in yield_C2_xy_inds():
+                    yield (iz, iy, ix), (iz, jy, jx)
+
+        # Pick the appropriate generator for 1D, 2D, or 3D lattices.
+        if self.ndim == 1:
+            symmetric_indices = yield_C2_x_inds
+        elif self.ndim == 2:
+            symmetric_indices = yield_C2_xy_inds
+        elif self.ndim == 3:
+            symmetric_indices = yield_C2_xyz_inds
+
+        # Check the universes list for any asymmetry.
+        for i, j in symmetric_indices():
+            if key(self.universes[i]) != key(self.universes[j]):
+                return False
+
+        # The lattice is symmetric!
+        return True
+
     def is_valid_index(self, idx):
         """Determine whether lattice element index is within defined range
 
