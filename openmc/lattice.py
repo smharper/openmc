@@ -743,6 +743,22 @@ class RectLattice(Lattice):
             return (z, max_y - y, x)
 
     def is_2fold_rot_symmetric(self, key=None):
+        """Determine if lattice is symmetric to 180-degree rotations.
+
+        Parameters
+        ----------
+        key : callable or None
+            A function of one argument that will be used to compare universes
+            contained in the lattice. If None, the universe IDs will be used
+            for comparison.
+
+        Returns
+        -------
+        bool
+            True if universes in 180-degree symmetric positions match according
+            to the given key function.
+
+        """
         # If no key function is given, default to one that extracts the id
         # of the sub-universe.
         if key is None:
@@ -781,6 +797,73 @@ class RectLattice(Lattice):
         # Check the universes list for any asymmetry.
         for i, j in symmetric_indices():
             if key(self.universes[i]) != key(self.universes[j]):
+                return False
+
+        # The lattice is symmetric!
+        return True
+
+    def is_4fold_rot_symmetric(self, key=None):
+        """Determine if lattice is symmetric to 90-degree rotations.
+
+        Parameters
+        ----------
+        key : callable or None
+            A function of one argument that will be used to compare universes
+            contained in the lattice. If None, the universe IDs will be used
+            for comparison.
+
+        Returns
+        -------
+        bool
+            True if universes in 90-degree symmetric positions match according
+            to the given key function.
+
+        """
+        # If no key function is given, default to one that extracts the id
+        # of the sub-universe.
+        if key is None:
+            key = lambda univ: univ.id
+
+        # Define a generator for (y, x) indices that are 90 symmetric in the
+        # xy plane.
+        def yield_C4_xy_inds():
+            half_nx = (self.shape[0] // 2) + (self.shape[0] % 2)
+            half_ny = (self.shape[1] // 2) + (self.shape[1] % 2)
+            for iy in range(half_ny):
+                for ix in range(half_nx):
+                    jx = self.shape[0] - iy - 1
+                    jy = ix
+
+                    kx = self.shape[0] - ix - 1
+                    ky = self.shape[1] - iy - 1
+
+                    lx = iy
+                    ly = self.shape[1] - ix - 1
+
+                    yield (iy, ix), (jy, jx), (ky, kx), (ly, lx)
+
+        # Define a generator for (z, y, x) indices that are 90 symmetric in
+        # each xy plane along the z-axis.
+        def yield_C4_xyz_inds():
+            for iz in range(self.shape[2]):
+                for inds in yield_C4_xy_inds():
+                    yield tuple((iz, ) + ixy for ixy in inds)
+
+        # Check the dimensions and pitch of the lattice first.
+        if self.ndim == 1: return False
+        if self.shape[-2] != self.shape[-1]: return False
+        if self.pitch[0] != self.pitch[1]: return False
+
+        # Pick the appropriate generator for 1D, 2D, or 3D lattices.
+        if self.ndim == 2:
+            symmetric_indices = yield_C4_xy_inds
+        elif self.ndim == 3:
+            symmetric_indices = yield_C4_xyz_inds
+
+        # Check the universes list for any asymmetry.
+        for i, j, k, l in symmetric_indices():
+            if not (key(self.universes[i]) == key(self.universes[j])
+                    == key(self.universes[k]) == key(self.universes[l])):
                 return False
 
         # The lattice is symmetric!
