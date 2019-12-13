@@ -37,6 +37,8 @@ public:
 
   void set_active(bool active) { active_ = active; }
 
+  void set_writable(bool writable) { writable_ = writable; }
+
   void set_scores(pugi::xml_node node);
 
   void set_scores(const std::vector<std::string>& scores);
@@ -55,6 +57,8 @@ public:
 
   int32_t n_filter_bins() const {return n_filter_bins_;}
 
+  bool writable() const { return writable_;}
+
   //----------------------------------------------------------------------------
   // Other methods.
 
@@ -69,7 +73,7 @@ public:
   //----------------------------------------------------------------------------
   // Major public data members.
 
-  int id_; //!< User-defined identifier
+  int id_ {C_NONE}; //!< User-defined identifier
 
   std::string name_; //!< User-defined name
 
@@ -97,6 +101,9 @@ public:
   //! second dimension of the array is for the combination of filters
   //! (e.g. specific cell, specific energy group, etc.)
   xt::xtensor<double, 3> results_;
+
+  //! True if this tally should be written to statepoint files
+  bool writable_ {true};
 
   //----------------------------------------------------------------------------
   // Miscellaneous public members.
