@@ -66,9 +66,9 @@ class CrossScore(object):
         return not self == other
 
     def __repr__(self):
-        string = '({0} {1} {2})'.format(self.left_score,
-                                        self.binary_op, self.right_score)
-        return string
+        out = '({0} {1} {2})'.format(self.left_score, self.binary_op,
+                                     self.right_score)
+        return out
 
     @property
     def left_score(self):
@@ -166,26 +166,25 @@ class CrossNuclide(object):
 
     @property
     def name(self):
-
-        string = ''
+        out = ''
 
         # If the Summary was linked, the left nuclide is a Nuclide object
         if isinstance(self.left_nuclide, openmc.Nuclide):
-            string += '(' + self.left_nuclide.name
+            out += '(' + self.left_nuclide.name
         # If the Summary was not linked, the left nuclide is the ZAID
         else:
-            string += '(' + str(self.left_nuclide)
+            out += '(' + str(self.left_nuclide)
 
-        string += ' ' + self.binary_op + ' '
+        out += ' ' + self.binary_op + ' '
 
         # If the Summary was linked, the right nuclide is a Nuclide object
         if isinstance(self.right_nuclide, openmc.Nuclide):
-            string += self.right_nuclide.name + ')'
+            out += self.right_nuclide.name + ')'
         # If the Summary was not linked, the right nuclide is the ZAID
         else:
-            string += str(self.right_nuclide) + ')'
+            out += str(self.right_nuclide) + ')'
 
-        return string
+        return out
 
     @left_nuclide.setter
     def left_nuclide(self, left_nuclide):
@@ -270,17 +269,16 @@ class CrossFilter(object):
         return not self == other
 
     def __repr__(self):
-
-        string = 'CrossFilter\n'
+        out = 'CrossFilter\n'
         filter_type = '({0} {1} {2})'.format(self.left_filter.type,
                                              self.binary_op,
                                              self.right_filter.type)
         filter_bins = '({0} {1} {2})'.format(self.left_filter.bins,
                                              self.binary_op,
                                              self.right_filter.bins)
-        string += '{0: <16}{1}{2}\n'.format('\tType', '=\t', filter_type)
-        string += '{0: <16}{1}{2}\n'.format('\tBins', '=\t', filter_bins)
-        return string
+        out += '{0: <16}{1}{2}\n'.format('\tType', '=\t', filter_type)
+        out += '{0: <16}{1}{2}\n'.format('\tBins', '=\t', filter_bins)
+        return out
 
     @property
     def left_filter(self):
@@ -460,9 +458,9 @@ class AggregateScore(object):
         return not self == other
 
     def __repr__(self):
-        string = ', '.join(map(str, self.scores))
-        string = '{0}({1})'.format(self.aggregate_op, string)
-        return string
+        out = ', '.join(map(str, self.scores))
+        out = '{0}({1})'.format(self.aggregate_op, out)
+        return out
 
     @property
     def scores(self):
@@ -474,10 +472,9 @@ class AggregateScore(object):
 
     @property
     def name(self):
-
         # Append each score in the aggregate to the string
-        string = '(' + ', '.join(self.scores) + ')'
-        return string
+        out = '(' + ', '.join(self.scores) + ')'
+        return out
 
     @scores.setter
     def scores(self, scores):
@@ -533,13 +530,12 @@ class AggregateNuclide(object):
         return not self == other
 
     def __repr__(self):
-
         # Append each nuclide in the aggregate to the string
-        string = '{0}('.format(self.aggregate_op)
+        out = '{0}('.format(self.aggregate_op)
         names = [nuclide.name if isinstance(nuclide, openmc.Nuclide)
                  else str(nuclide) for nuclide in self.nuclides]
-        string += ', '.join(map(str, names)) + ')'
-        return string
+        out += ', '.join(map(str, names)) + ')'
+        return out
 
     @property
     def nuclides(self):
@@ -551,12 +547,11 @@ class AggregateNuclide(object):
 
     @property
     def name(self):
-
         # Append each nuclide in the aggregate to the string
         names = [nuclide.name if isinstance(nuclide, openmc.Nuclide)
                  else str(nuclide) for nuclide in self.nuclides]
-        string = '(' + ', '.join(map(str, names)) + ')'
-        return string
+        out = '(' + ', '.join(map(str, names)) + ')'
+        return out
 
     @nuclides.setter
     def nuclides(self, nuclides):
@@ -641,10 +636,10 @@ class AggregateFilter(object):
         return not self > other
 
     def __repr__(self):
-        string = 'AggregateFilter\n'
-        string += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self.type)
-        string += '{0: <16}{1}{2}\n'.format('\tBins', '=\t', self.bins)
-        return string
+        out = 'AggregateFilter\n'
+        out += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self.type)
+        out += '{0: <16}{1}{2}\n'.format('\tBins', '=\t', self.bins)
+        return out
 
     @property
     def aggregate_filter(self):

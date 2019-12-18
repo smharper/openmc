@@ -1549,17 +1549,17 @@ class MGXS(metaclass=ABCMeta):
         cv.check_value('xs_type', xs_type, ['macro', 'micro'])
 
         # Build header for string with type and domain info
-        string = 'Multi-Group XS\n'
-        string += '{0: <16}=\t{1}\n'.format('\tReaction Type', self.rxn_type)
-        string += '{0: <16}=\t{1}\n'.format('\tDomain Type', self.domain_type)
-        string += '{0: <16}=\t{1}\n'.format('\tDomain ID', self.domain.id)
+        out = 'Multi-Group XS\n'
+        out += '{0: <16}=\t{1}\n'.format('\tReaction Type', self.rxn_type)
+        out += '{0: <16}=\t{1}\n'.format('\tDomain Type', self.domain_type)
+        out += '{0: <16}=\t{1}\n'.format('\tDomain ID', self.domain.id)
 
         # Generate the header for an individual XS
         xs_header = '\tCross Sections [{0}]:'.format(self.get_units(xs_type))
 
         # If cross section data has not been computed, only print string header
         if self.tallies is None:
-            print(string)
+            print(out)
             return
 
         # Set polar/azimuthal bins
@@ -1573,17 +1573,17 @@ class MGXS(metaclass=ABCMeta):
         for subdomain in subdomains:
 
             if self.domain_type == 'distribcell' or self.domain_type == 'mesh':
-                string += '{0: <16}=\t{1}\n'.format('\tSubdomain', subdomain)
+                out += '{0: <16}=\t{1}\n'.format('\tSubdomain', subdomain)
 
             # Loop over all Nuclides
             for nuclide in nuclides:
 
                 # Build header for nuclide type
                 if nuclide != 'sum':
-                    string += '{0: <16}=\t{1}\n'.format('\tNuclide', nuclide)
+                    out += '{0: <16}=\t{1}\n'.format('\tNuclide', nuclide)
 
                 # Build header for cross section type
-                string += '{0: <16}\n'.format(xs_header)
+                out += '{0: <16}\n'.format(xs_header)
                 template = '{0: <12}Group {1} [{2: <10} - {3: <10}eV]:\t'
 
                 average_xs = self.get_xs(nuclides=[nuclide],
@@ -1600,35 +1600,35 @@ class MGXS(metaclass=ABCMeta):
                         pol_low, pol_high = pol_bins[pol: pol + 2]
                         for azi in range(len(azi_bins) - 1):
                             azi_low, azi_high = azi_bins[azi: azi + 2]
-                            string += '\t\tPolar Angle: [{0:5f} - {1:5f}]'.format(
+                            out += '\t\tPolar Angle: [{0:5f} - {1:5f}]'.format(
                                 pol_low, pol_high) + \
                                 '\tAzimuthal Angle: [{0:5f} - {1:5f}]'.format(
                                 azi_low, azi_high) + '\n'
                             for group in range(1, self.num_groups + 1):
                                 bounds = \
                                     self.energy_groups.get_group_bounds(group)
-                                string += '\t' + template.format('', group,
-                                                                 bounds[0],
-                                                                 bounds[1])
+                                out += '\t' + template.format('', group,
+                                                              bounds[0],
+                                                              bounds[1])
 
-                                string += '{0:.2e} +/- {1:.2e}%'.format(
+                                out += '{0:.2e} +/- {1:.2e}%'.format(
                                     average_xs[pol, azi, group - 1],
                                     rel_err_xs[pol, azi, group - 1])
-                                string += '\n'
-                            string += '\n'
+                                out += '\n'
+                            out += '\n'
                 else:
                     # Loop over energy groups
                     for group in range(1, self.num_groups + 1):
                         bounds = self.energy_groups.get_group_bounds(group)
-                        string += template.format('', group, bounds[0],
+                        out += template.format('', group, bounds[0],
                                                   bounds[1])
-                        string += '{0:.2e} +/- {1:.2e}%'.format(
+                        out += '{0:.2e} +/- {1:.2e}%'.format(
                             average_xs[group - 1], rel_err_xs[group - 1])
-                        string += '\n'
-                string += '\n'
-            string += '\n'
+                        out += '\n'
+                out += '\n'
+            out += '\n'
 
-        print(string)
+        print(out)
 
     def build_hdf5_store(self, filename='mgxs.h5', directory='mgxs',
                          subdomains='all', nuclides='all',

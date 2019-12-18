@@ -438,27 +438,27 @@ class Plot(IDManagerMixin):
                 cv.check_less_than('RGB component', rgb, 256)
 
     def __repr__(self):
-        string = 'Plot\n'
-        string += '{: <16}=\t{}\n'.format('\tID', self._id)
-        string += '{: <16}=\t{}\n'.format('\tName', self._name)
-        string += '{: <16}=\t{}\n'.format('\tFilename', self._filename)
-        string += '{: <16}=\t{}\n'.format('\tType', self._type)
-        string += '{: <16}=\t{}\n'.format('\tBasis', self._basis)
-        string += '{: <16}=\t{}\n'.format('\tWidth', self._width)
-        string += '{: <16}=\t{}\n'.format('\tOrigin', self._origin)
-        string += '{: <16}=\t{}\n'.format('\tPixels', self._pixels)
-        string += '{: <16}=\t{}\n'.format('\tColor by', self._color_by)
-        string += '{: <16}=\t{}\n'.format('\tBackground', self._background)
-        string += '{: <16}=\t{}\n'.format('\tMask components',
-                                            self._mask_components)
-        string += '{: <16}=\t{}\n'.format('\tMask background',
-                                            self._mask_background)
-        string += '{: <16}=\t{}\n'.format('\Overlap Color',
-                                            self._overlap_color)
-        string += '{: <16}=\t{}\n'.format('\tColors', self._colors)
-        string += '{: <16}=\t{}\n'.format('\tLevel', self._level)
-        string += '{: <16}=\t{}\n'.format('\tMeshlines', self._meshlines)
-        return string
+        out = 'Plot\n'
+        out += '{: <16}=\t{}\n'.format('\tID', self._id)
+        out += '{: <16}=\t{}\n'.format('\tName', self._name)
+        out += '{: <16}=\t{}\n'.format('\tFilename', self._filename)
+        out += '{: <16}=\t{}\n'.format('\tType', self._type)
+        out += '{: <16}=\t{}\n'.format('\tBasis', self._basis)
+        out += '{: <16}=\t{}\n'.format('\tWidth', self._width)
+        out += '{: <16}=\t{}\n'.format('\tOrigin', self._origin)
+        out += '{: <16}=\t{}\n'.format('\tPixels', self._pixels)
+        out += '{: <16}=\t{}\n'.format('\tColor by', self._color_by)
+        out += '{: <16}=\t{}\n'.format('\tBackground', self._background)
+        out += '{: <16}=\t{}\n'.format('\tMask components',
+                                       self._mask_components)
+        out += '{: <16}=\t{}\n'.format('\tMask background',
+                                       self._mask_background)
+        out += '{: <16}=\t{}\n'.format('\Overlap Color',
+                                       self._overlap_color)
+        out += '{: <16}=\t{}\n'.format('\tColors', self._colors)
+        out += '{: <16}=\t{}\n'.format('\tLevel', self._level)
+        out += '{: <16}=\t{}\n'.format('\tMeshlines', self._meshlines)
+        return out
 
     @classmethod
     def from_geometry(cls, geometry, basis='xy', slice_coord=0.):

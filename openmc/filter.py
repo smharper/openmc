@@ -129,15 +129,15 @@ class Filter(IDManagerMixin, metaclass=FilterMeta):
         return not self > other
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tBins', self.bins)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tBins', self.bins)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tBins', self.bins)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tBins', self.bins)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @classmethod
     def _recursive_subclasses(cls):
@@ -617,15 +617,15 @@ class MeshFilter(Filter):
         self.id = filter_id
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tMesh ID', self.mesh.id)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tMesh ID', self.mesh.id)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tMesh ID', self.mesh.id)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tMesh ID', self.mesh.id)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @classmethod
     def from_hdf5(cls, group, **kwargs):
@@ -913,10 +913,10 @@ class RealFilter(Filter):
             return super().__gt__(other)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tValues', self.values)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tValues', self.values)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @Filter.bins.setter
     def bins(self, bins):
@@ -1635,17 +1635,17 @@ class EnergyFunctionFilter(Filter):
             return False
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tEnergy', self.energy)
-        string += '{: <16}=\t{}\n'.format('\tInterpolant', self.y)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tEnergy', self.energy)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tInterpolant', self.y)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tEnergy', self.energy)
-        string += '{: <16}=\t{}\n'.format('\tInterpolant', self.y)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tEnergy', self.energy)
+        out += '{: <16}=\t{}\n'.format('\tInterpolant', self.y)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @classmethod
     def from_hdf5(cls, group, **kwargs):

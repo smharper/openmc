@@ -75,15 +75,15 @@ class LegendreFilter(ExpansionFilter):
     """
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @ExpansionFilter.order.setter
     def order(self, order):
@@ -148,21 +148,21 @@ class SpatialLegendreFilter(ExpansionFilter):
         self.maximum = maximum
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tAxis', self.axis)
-        string += '{: <16}=\t{}\n'.format('\tMin', self.minimum)
-        string += '{: <16}=\t{}\n'.format('\tMax', self.maximum)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tAxis', self.axis)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tMin', self.minimum)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tMax', self.maximum)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tAxis', self.axis)
-        string += '{: <16}=\t{}\n'.format('\tMin', self.minimum)
-        string += '{: <16}=\t{}\n'.format('\tMax', self.maximum)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        out += '{: <16}=\t{}\n'.format('\tAxis', self.axis)
+        out += '{: <16}=\t{}\n'.format('\tMin', self.minimum)
+        out += '{: <16}=\t{}\n'.format('\tMax', self.maximum)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @ExpansionFilter.order.setter
     def order(self, order):
@@ -263,17 +263,17 @@ class SphericalHarmonicsFilter(ExpansionFilter):
         self._cosine = 'particle'
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tCosine', self.cosine)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tCosine', self.cosine)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tCosine', self.cosine)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        out += '{: <16}=\t{}\n'.format('\tCosine', self.cosine)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @ExpansionFilter.order.setter
     def order(self, order):
@@ -388,18 +388,18 @@ class ZernikeFilter(ExpansionFilter):
         self.r = r
 
     def __hash__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tX', self.x)
-        string += '{: <16}=\t{}\n'.format('\tY', self.y)
-        string += '{: <16}=\t{}\n'.format('\tR', self.r)
-        return hash(string)
+        hashable_descr = type(self).__name__ + '\n'
+        hashable_descr += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tX', self.x)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tY', self.y)
+        hashable_descr += '{: <16}=\t{}\n'.format('\tR', self.r)
+        return hash(hashable_descr)
 
     def __repr__(self):
-        string = type(self).__name__ + '\n'
-        string += '{: <16}=\t{}\n'.format('\tOrder', self.order)
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        return string
+        out = type(self).__name__ + '\n'
+        out += '{: <16}=\t{}\n'.format('\tOrder', self.order)
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        return out
 
     @ExpansionFilter.order.setter
     def order(self, order):

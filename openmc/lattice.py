@@ -566,35 +566,32 @@ class RectLattice(Lattice):
         self._lower_left = None
 
     def __repr__(self):
-        string = 'RectLattice\n'
-        string += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
-        string += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
-        string += '{0: <16}{1}{2}\n'.format('\tShape', '=\t',
-                                            self.shape)
-        string += '{0: <16}{1}{2}\n'.format('\tLower Left', '=\t',
-                                            self._lower_left)
-        string += '{0: <16}{1}{2}\n'.format('\tPitch', '=\t', self._pitch)
+        out = 'RectLattice\n'
+        out += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
+        out += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
+        out += '{0: <16}{1}{2}\n'.format('\tShape', '=\t', self.shape)
+        out += '{0: <16}{1}{2}\n'.format('\tLower Left', '=\t',
+                                         self._lower_left)
+        out += '{0: <16}{1}{2}\n'.format('\tPitch', '=\t', self._pitch)
 
         if self._outer is not None:
-            string += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t',
-                                                self._outer._id)
+            out += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t', self._outer._id)
         else:
-            string += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t',
-                                                self._outer)
+            out += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t', self._outer)
 
-        string += '{0: <16}\n'.format('\tUniverses')
+        out += '{0: <16}\n'.format('\tUniverses')
 
         # Lattice nested Universe IDs - column major for Fortran
         for i, universe in enumerate(np.ravel(self._universes)):
-            string += '{0} '.format(universe._id)
+            out += '{0} '.format(universe._id)
 
             # Add a newline character every time we reach end of row of cells
             if (i+1) % self.shape[0] == 0:
-                string += '\n'
+                out += '\n'
 
-        string = string.rstrip('\n')
+        out = out.rstrip('\n')
 
-        return string
+        return out
 
     @property
     def indices(self):
@@ -965,34 +962,31 @@ class HexLattice(Lattice):
         self._orientation = 'y'
 
     def __repr__(self):
-        string = 'HexLattice\n'
-        string += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
-        string += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
-        string += '{0: <16}{1}{2}\n'.format('\tOrientation', '=\t',
-                                            self._orientation)
-        string += '{0: <16}{1}{2}\n'.format('\t# Rings', '=\t', self._num_rings)
-        string += '{0: <16}{1}{2}\n'.format('\t# Axial', '=\t', self._num_axial)
-        string += '{0: <16}{1}{2}\n'.format('\tCenter', '=\t',
-                                            self._center)
-        string += '{0: <16}{1}{2}\n'.format('\tPitch', '=\t', self._pitch)
+        out = 'HexLattice\n'
+        out += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
+        out += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
+        out += '{0: <16}{1}{2}\n'.format('\tOrientation', '=\t',
+                                         self._orientation)
+        out += '{0: <16}{1}{2}\n'.format('\t# Rings', '=\t', self._num_rings)
+        out += '{0: <16}{1}{2}\n'.format('\t# Axial', '=\t', self._num_axial)
+        out += '{0: <16}{1}{2}\n'.format('\tCenter', '=\t', self._center)
+        out += '{0: <16}{1}{2}\n'.format('\tPitch', '=\t', self._pitch)
 
         if self._outer is not None:
-            string += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t',
-                                                self._outer._id)
+            out += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t', self._outer._id)
         else:
-            string += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t',
-                                                self._outer)
+            out += '{0: <16}{1}{2}\n'.format('\tOuter', '=\t', self._outer)
 
-        string += '{0: <16}\n'.format('\tUniverses')
+        out += '{0: <16}\n'.format('\tUniverses')
 
         if self._num_axial is not None:
             slices = [self._repr_axial_slice(x) for x in self._universes]
-            string += '\n'.join(slices)
+            out += '\n'.join(slices)
 
         else:
-            string += self._repr_axial_slice(self._universes)
+            out += self._repr_axial_slice(self._universes)
 
-        return string
+        return out
 
     @property
     def num_rings(self):

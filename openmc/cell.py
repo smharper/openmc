@@ -114,28 +114,27 @@ class Cell(IDManagerMixin):
             return point in self.region
 
     def __repr__(self):
-        string = 'Cell\n'
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        string += '{: <16}=\t{}\n'.format('\tName', self.name)
+        out = 'Cell\n'
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        out += '{: <16}=\t{}\n'.format('\tName', self.name)
 
         if self.fill_type == 'material':
-            string += '{: <16}=\tMaterial {}\n'.format('\tFill', self.fill.id)
+            out += '{: <16}=\tMaterial {}\n'.format('\tFill', self.fill.id)
         elif self.fill_type == 'void':
-            string += '{: <16}=\tNone\n'.format('\tFill')
+            out += '{: <16}=\tNone\n'.format('\tFill')
         elif self.fill_type == 'distribmat':
-            string += '{: <16}=\t{}\n'.format('\tFill', list(map(
+            out += '{: <16}=\t{}\n'.format('\tFill', list(map(
                 lambda m: m if m is None else m.id, self.fill)))
         else:
-            string += '{: <16}=\t{}\n'.format('\tFill', self.fill.id)
+            out += '{: <16}=\t{}\n'.format('\tFill', self.fill.id)
 
-        string += '{: <16}=\t{}\n'.format('\tRegion', self.region)
-        string += '{: <16}=\t{}\n'.format('\tRotation', self.rotation)
+        out += '{: <16}=\t{}\n'.format('\tRegion', self.region)
+        out += '{: <16}=\t{}\n'.format('\tRotation', self.rotation)
         if self.fill_type == 'material':
-            string += '\t{0: <15}=\t{1}\n'.format('Temperature',
-                                                  self.temperature)
-        string += '{: <16}=\t{}\n'.format('\tTranslation', self.translation)
+            out += '\t{0: <15}=\t{1}\n'.format('Temperature', self.temperature)
+        out += '{: <16}=\t{}\n'.format('\tTranslation', self.translation)
 
-        return string
+        return out
 
     @property
     def name(self):

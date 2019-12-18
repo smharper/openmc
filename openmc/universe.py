@@ -63,12 +63,12 @@ class Universe(IDManagerMixin):
             self.add_cells(cells)
 
     def __repr__(self):
-        string = 'Universe\n'
-        string += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
-        string += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
-        string += '{0: <16}{1}{2}\n'.format('\tCells', '=\t',
-                                            list(self._cells.keys()))
-        return string
+        out = 'Universe\n'
+        out += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
+        out += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
+        out += '{0: <16}{1}{2}\n'.format('\tCells', '=\t',
+                                         list(self._cells.keys()))
+        return out
 
     @property
     def name(self):

@@ -114,30 +114,30 @@ class Material(IDManagerMixin):
         self._distrib_otf_file = None
 
     def __repr__(self):
-        string = 'Material\n'
-        string += '{: <16}=\t{}\n'.format('\tID', self._id)
-        string += '{: <16}=\t{}\n'.format('\tName', self._name)
-        string += '{: <16}=\t{}\n'.format('\tTemperature', self._temperature)
+        out = 'Material\n'
+        out += '{: <16}=\t{}\n'.format('\tID', self._id)
+        out += '{: <16}=\t{}\n'.format('\tName', self._name)
+        out += '{: <16}=\t{}\n'.format('\tTemperature', self._temperature)
 
-        string += '{: <16}=\t{}'.format('\tDensity', self._density)
-        string += ' [{}]\n'.format(self._density_units)
+        out += '{: <16}=\t{}'.format('\tDensity', self._density)
+        out += ' [{}]\n'.format(self._density_units)
 
-        string += '{: <16}\n'.format('\tS(a,b) Tables')
+        out += '{: <16}\n'.format('\tS(a,b) Tables')
 
         for sab in self._sab:
-            string += '{: <16}=\t{}\n'.format('\tS(a,b)', sab)
+            out += '{: <16}=\t{}\n'.format('\tS(a,b)', sab)
 
-        string += '{: <16}\n'.format('\tNuclides')
+        out += '{: <16}\n'.format('\tNuclides')
 
         for nuclide, percent, percent_type in self._nuclides:
-            string += '{: <16}'.format('\t{}'.format(nuclide))
-            string += '=\t{: <12} [{}]\n'.format(percent, percent_type)
+            out += '{: <16}'.format('\t{}'.format(nuclide))
+            out += '=\t{: <12} [{}]\n'.format(percent, percent_type)
 
         if self._macroscopic is not None:
-            string += '{: <16}\n'.format('\tMacroscopic Data')
-            string += '{: <16}'.format('\t{}'.format(self._macroscopic))
+            out += '{: <16}\n'.format('\tMacroscopic Data')
+            out += '{: <16}'.format('\t{}'.format(self._macroscopic))
 
-        return string
+        return out
 
     @property
     def name(self):

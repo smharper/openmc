@@ -128,28 +128,28 @@ class Tally(IDManagerMixin):
         self._results_read = False
 
     def __repr__(self):
-        string = 'Tally\n'
-        string += '{: <16}=\t{}\n'.format('\tID', self.id)
-        string += '{: <16}=\t{}\n'.format('\tName', self.name)
+        out = 'Tally\n'
+        out += '{: <16}=\t{}\n'.format('\tID', self.id)
+        out += '{: <16}=\t{}\n'.format('\tName', self.name)
 
         if self.derivative is not None:
-            string += '{: <16}=\t{}\n'.format('\tDerivative ID',
-                                              str(self.derivative.id))
+            out += '{: <16}=\t{}\n'.format('\tDerivative ID',
+                                           str(self.derivative.id))
 
         filters = ', '.join(type(f).__name__ for f in self.filters)
-        string += '{: <16}=\t{}\n'.format('\tFilters', filters)
+        out += '{: <16}=\t{}\n'.format('\tFilters', filters)
 
-        string += '{: <16}=\t'.format('\tNuclides')
+        out += '{: <16}=\t'.format('\tNuclides')
 
         for nuclide in self.nuclides:
-            string += str(nuclide) + ' '
+            out += str(nuclide) + ' '
 
-        string += '\n'
+        out += '\n'
 
-        string += '{: <16}=\t{}\n'.format('\tScores', self.scores)
-        string += '{: <16}=\t{}\n'.format('\tEstimator', self.estimator)
+        out += '{: <16}=\t{}\n'.format('\tScores', self.scores)
+        out += '{: <16}=\t{}\n'.format('\tEstimator', self.estimator)
 
-        return string
+        return out
 
     @property
     def name(self):

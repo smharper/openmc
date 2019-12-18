@@ -78,11 +78,12 @@ class Surface(IDManagerMixin, metaclass=ABCMeta):
         return Halfspace(self, '+')
 
     def __repr__(self):
-        string = 'Surface\n'
-        string += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
-        string += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
-        string += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self._type)
-        string += '{0: <16}{1}{2}\n'.format('\tBoundary', '=\t', self._boundary_type)
+        out = 'Surface\n'
+        out += '{0: <16}{1}{2}\n'.format('\tID', '=\t', self._id)
+        out += '{0: <16}{1}{2}\n'.format('\tName', '=\t', self._name)
+        out += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self._type)
+        out += '{0: <16}{1}{2}\n'.format('\tBoundary', '=\t',
+                                         self._boundary_type)
 
         coefficients = '{0: <16}'.format('\tCoefficients') + '\n'
 
@@ -90,9 +91,9 @@ class Surface(IDManagerMixin, metaclass=ABCMeta):
             coefficients += '{0: <16}{1}{2}\n'.format(
                 coeff, '=\t', self._coefficients[coeff])
 
-        string += coefficients
+        out += coefficients
 
-        return string
+        return out
 
     @property
     def name(self):

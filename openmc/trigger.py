@@ -42,11 +42,11 @@ class Trigger(object):
         return not self == other
 
     def __repr__(self):
-        string = 'Trigger\n'
-        string += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self._trigger_type)
-        string += '{0: <16}{1}{2}\n'.format('\tThreshold', '=\t', self._threshold)
-        string += '{0: <16}{1}{2}\n'.format('\tScores', '=\t', self._scores)
-        return string
+        out = 'Trigger\n'
+        out += '{0: <16}{1}{2}\n'.format('\tType', '=\t', self._trigger_type)
+        out += '{0: <16}{1}{2}\n'.format('\tThreshold', '=\t', self._threshold)
+        out += '{0: <16}{1}{2}\n'.format('\tScores', '=\t', self._scores)
+        return out
 
     @property
     def trigger_type(self):
