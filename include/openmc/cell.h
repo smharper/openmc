@@ -48,9 +48,6 @@ namespace model {
 
   extern std::vector<std::unique_ptr<Universe>> universes;
   extern std::unordered_map<int32_t, int32_t> universe_map;
-
-  extern std::vector<std::vector<int32_t>> neighbor_lists;
-  #pragma omp threadprivate(neighbor_lists)
 } // namespace model
 
 //==============================================================================

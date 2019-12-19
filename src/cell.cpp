@@ -35,8 +35,6 @@ namespace model {
 
   std::vector<std::unique_ptr<Universe>> universes;
   std::unordered_map<int32_t, int32_t> universe_map;
-
-  std::vector<std::vector<int32_t>> neighbor_lists;
 } // namespace model
 
 //==============================================================================
@@ -1013,9 +1011,6 @@ void read_cells(pugi::xml_node node)
       fatal_error(err_msg);
     }
   }
-
-  #pragma omp parallel
-  model::neighbor_lists.resize(model::cells.size());
 
   // Populate the Universe vector and map.
   for (int i = 0; i < model::cells.size(); i++) {
