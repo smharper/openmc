@@ -595,6 +595,9 @@ free_memory_geometry()
   model::lattices.clear();
   model::lattice_map.clear();
 
+  #pragma omp parallel
+  model::neighbor_lists.clear();
+
   model::overlap_check_count.clear();
 }
 
