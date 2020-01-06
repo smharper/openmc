@@ -65,13 +65,6 @@ void finalize_geometry(std::vector<std::vector<double>>& nuc_temps,
 
 int32_t find_root_universe();
 
-
-//!=============================================================================
-//! Build a list of neighboring cells to each surface to speed up tracking.
-//!=============================================================================
-
-void neighbor_lists();
-
 //==============================================================================
 //! Populate all data structures needed for distribcells.
 //==============================================================================

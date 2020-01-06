@@ -13,6 +13,7 @@
 #include "dagmc.h"
 
 #include "openmc/constants.h"
+#include "openmc/neighbor_list.h"
 #include "openmc/position.h"
 #include "openmc/surface.h"
 
@@ -170,6 +171,9 @@ public:
   //! Reverse Polish notation for region expression
   std::vector<std::int32_t> rpn_;
   bool simple_;  //!< Does the region contain only intersections?
+
+  //! \brief Neighboring cells in the same universe.
+  NeighborList neighbors_;
 
   Position translation_ {0, 0, 0}; //!< Translation vector for filled universe
 
