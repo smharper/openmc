@@ -2,7 +2,6 @@
 #define OPENMC_NEIGHBOR_LIST_H
 
 #include <algorithm>
-#include <atomic>
 #include <cstdint>
 #include <forward_list>
 #include <iterator> // for forward_iterator_tag
@@ -22,7 +21,7 @@ struct NeighborListNode
     : value(v)
   {}
 
-  std::atomic<NeighborListNode*> next {nullptr};
+  NeighborListNode* next {nullptr};
   int32_t value;
 };
 
@@ -34,13 +33,16 @@ class NeighborListIter
 {
 public:
   using value_type = int32_t;
-  using reference = const int32_t&;
-  using pointer = const int32_t*;
-  using difference_type = ptrdiff_t;
+  using reference = const value_type&;
+  using pointer = const value_type*;
+  using difference_type = int32_t;
   using iterator_category = std::forward_iterator_tag;
 
-  NeighborListIter(const NeighborListNode* n)
-    : node_(n)
+  NeighborListIter(const NeighborListNode* n, difference_type position,
+    difference_type length)
+    : node_(n),
+    position_(position),
+    length_(length)
   {}
 
   reference operator*()
@@ -54,12 +56,21 @@ public:
 
   NeighborListIter& operator++()
   {
-    node_ = node_->next.load(std::memory_order_relaxed);
+    // Only read node_->next values for the first `length_-1` nodes. Subsequent
+    // nodes may have invalid next pointers due to concurrent read/writes.
+    if (position_ < length_ - 1) {
+      node_ = node_->next;
+      ++position_;
+    } else {
+      node_ = nullptr;
+    }
     return *this;
   }
 
 private:
   const NeighborListNode* node_;
+  difference_type position_;
+  difference_type length_;
 };
 
 //==============================================================================
@@ -80,6 +91,7 @@ public:
 
   ~NeighborList()
   {
+    // It is assumed this function is called in a serial section of the code.
     NeighborListNode* this_node = head_;
     while (this_node) {
       NeighborListNode* next_node = this_node->next;
@@ -89,10 +101,23 @@ public:
   }
 
   const_iterator cbegin() const
-  {return const_iterator(head_.load(std::memory_order_relaxed));}
+  {
+    // Atomically read the list length to prevent split reads.  If the length
+    // is zero, explicitly pass nullptr to the iterator.  (head_ should be a
+    // nullptr, but it may be an invalid value due to a concurrent write.)
+    // head_ will be valid for all lengths > 0.
+    const_iterator::difference_type length;
+    #pragma omp atomic read
+    length = length_;
+    if (length == 0) {
+      return const_iterator(nullptr, 0, 0);
+    } else {
+      return const_iterator(head_, 0, length_);
+    }
+  }
 
   const_iterator cend() const
-  {return const_iterator(nullptr);}
+  {return const_iterator(nullptr, 0, 0);}
 
   //! Attempt to add an element.
   //
@@ -102,7 +127,7 @@ public:
   //! element later is slightly faster than waiting on the lock to be released.
   void push_back(value_type new_elem)
   {
-    // Try to acquire the lock.
+    // Update the list if a lock is available.
     std::unique_lock<OpenMPMutex> lock(write_mutex_, std::try_to_lock);
     if (lock) {
       // It is possible another thread already added this element to the list
@@ -110,27 +135,29 @@ public:
       // element isn't a duplicate before adding it.
       if (std::find(cbegin(), cend(), new_elem) == cend()) {
         // Find the end of the list and add the the new element there.
-        auto* head = head_.load(std::memory_order_relaxed);
-        if (head) {
-          auto* tail = head;
-          auto* next = tail->next.load(std::memory_order_relaxed);
-          while (next) {
-            tail = next;
-            next = tail->next.load(std::memory_order_relaxed);
+        if (auto* tail = head_) {
+          while (tail->next) {
+            tail = tail->next;
           }
-          auto* new_tail = new NeighborListNode(new_elem);
-          tail->next.store(new_tail, std::memory_order_relaxed);
+          tail->next = new NeighborListNode(new_elem);
         } else {
-          head_.store(new NeighborListNode(new_elem),
-                      std::memory_order_relaxed);
+          head_ = new NeighborListNode(new_elem);
         }
+        // Use a flush to ensure the appropriate node pointer is updated and
+        // visible to all threads before adjusting the length.  This will
+        // prevent iterators from trying to read an invalid pointer.  Update
+        // the length atomically.
+        #pragma omp flush
+        #pragma omp atomic update
+        ++length_;
       }
     }
   }
 
 private:
-  std::atomic<NeighborListNode*> head_ {nullptr};
+  NeighborListNode* head_ {nullptr};
   OpenMPMutex write_mutex_;
+  const_iterator::difference_type length_ {0};
 };
 
 } // namespace openmc
