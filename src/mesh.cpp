@@ -922,7 +922,7 @@ void RectilinearMesh::bins_crossed(const Particle* p, std::vector<int>& bins,
   // assume the track lies in only one mesh bin. These tracks are very short so
   // any error caused by this assumption will be small.
   if (total_distance < 2*TINY_BIT) {
-    for (int i = 0; i < 3; ++i) ijk0[i] = ijk1[i];
+    for (int i = 0; i < 3; ++i) ijk1[i] = ijk0[i];
   }
 
   if (ijk0[0] < 1 || ijk0[0] > shape_[0] || ijk0[1] < 1 || ijk0[1] > shape_[1]
