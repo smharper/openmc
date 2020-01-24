@@ -912,12 +912,22 @@ void RectilinearMesh::bins_crossed(const Particle* p, std::vector<int>& bins,
   }
   r1 = r;
 
+  if (ijk0[0] < 1 || ijk0[0] > shape_[0] || ijk0[1] < 1 || ijk0[1] > shape_[1]
+      || ijk0[2] < 1 || ijk0[2] > shape_[2]) {
+    fatal_error("RectilinearMesh error before 2*TINY_BIT check");
+  }
+
   // The TINY_BIT offsets above mean that the preceding logic cannot always find
   // the correct ijk0 and ijk1 indices. For tracks shorter than 2*TINY_BIT, just
   // assume the track lies in only one mesh bin. These tracks are very short so
   // any error caused by this assumption will be small.
   if (total_distance < 2*TINY_BIT) {
     for (int i = 0; i < 3; ++i) ijk0[i] = ijk1[i];
+  }
+
+  if (ijk0[0] < 1 || ijk0[0] > shape_[0] || ijk0[1] < 1 || ijk0[1] > shape_[1]
+      || ijk0[2] < 1 || ijk0[2] > shape_[2]) {
+    fatal_error("RectilinearMesh error after 2*TINY_BIT check");
   }
 
   // ========================================================================

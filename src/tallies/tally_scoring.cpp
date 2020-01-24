@@ -1324,6 +1324,16 @@ score_general_ce(Particle* p, int i_tally, int start_index,
       apply_derivative_to_score(p, i_tally, i_nuclide, atom_density, score_bin,
         score);
 
+    auto s = tally.results_.shape();
+    if (filter_index < 0 || filter_index >= s[0]) {
+      fatal_error(std::string("Out of bounds filter index ")
+                  + std::to_string(filter_index));
+    }
+    if (score_index < 0 || score_index >= s[1]) {
+      fatal_error(std::string("Out of bounds score index ")
+                  + std::to_string(score_index));
+    }
+
     // Update tally results
     #pragma omp atomic
     tally.results_(filter_index, score_index, RESULT_VALUE) += score;
