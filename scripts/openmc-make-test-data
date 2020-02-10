@@ -84,7 +84,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
         print('Converting {}...'.format(os.path.basename(f)))
         data = openmc.data.IncidentNeutron.from_ace(f)
 
-        # Check for fission energy release data
+        # Check for fission energy release data on MF=1, MT=458
         endf_filename = 'neutrons/n-{:03}_{}_{:03}{}.endf'.format(
             data.atomic_number,
             data.atomic_symbol,
@@ -158,7 +158,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     print('Creating compressed archive...')
     test_tar = pwd / 'nndc_hdf5_test.tar.xz'
     with tarfile.open(str(test_tar), 'w:xz') as txz:
-        txz.add('nndc_hdf5')
+        txz.add(output_dir)
 
     # Change back to original directory
     os.chdir(str(pwd))

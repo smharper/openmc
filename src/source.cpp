@@ -86,6 +86,8 @@ SourceDistribution::SourceDistribution(pugi::xml_node node)
         type = get_node_value(node_space, "type", true, true);
       if (type == "cartesian") {
         space_ = UPtrSpace{new CartesianIndependent(node_space)};
+      } else if (type == "cylindrical") {
+        space_ = UPtrSpace{new CylindricalIndependent(node_space)};
       } else if (type == "spherical") {
         space_ = UPtrSpace{new SphericalIndependent(node_space)};
       } else if (type == "box") {
@@ -326,6 +328,7 @@ void free_memory_source()
 void fill_source_bank_fixedsource()
 {
   if (settings::path_source.empty()) {
+    #pragma omp parallel for
     for (int64_t i = 0; i < simulation::work_per_rank; ++i) {
       // initialize random number seed
       int64_t id = (simulation::total_gen + overall_generation()) *

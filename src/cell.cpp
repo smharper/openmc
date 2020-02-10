@@ -247,7 +247,7 @@ Cell::temperature(int32_t instance) const
 void
 Cell::set_temperature(double T, int32_t instance)
 {
-  if (settings::temperature_method == TEMPERATURE_INTERPOLATION) {
+  if (settings::temperature_method == TemperatureMethod::INTERPOLATION) {
     if (T < data::temperature_min) {
       throw std::runtime_error{"Temperature is below minimum temperature at "
         "which data is available."};
@@ -258,8 +258,13 @@ Cell::set_temperature(double T, int32_t instance)
   }
 
   if (instance >= 0) {
+    // If temperature vector is not big enough, resize it first
+    if (sqrtkT_.size() != n_instances_) sqrtkT_.resize(n_instances_, sqrtkT_[0]);
+
+    // Set temperature for the corresponding instance
     sqrtkT_.at(instance) = std::sqrt(K_BOLTZMANN * T);
   } else {
+    // Set temperature for all instances
     for (auto& T_ : sqrtkT_) {
       T_ = std::sqrt(K_BOLTZMANN * T);
     }
@@ -495,7 +500,7 @@ CSGCell::contains(Position r, Direction u, int32_t on_surface) const
 //==============================================================================
 
 std::pair<double, int32_t>
-CSGCell::distance(Position r, Direction u, int32_t on_surface) const
+CSGCell::distance(Position r, Direction u, int32_t on_surface, Particle* p) const
 {
   double min_dist {INFTY};
   int32_t i_surf {std::numeric_limits<int32_t>::max()};
@@ -560,7 +565,7 @@ CSGCell::to_hdf5(hid_t cell_group) const
   }
 
   // Write fill information.
-  if (type_ == FILL_MATERIAL) {
+  if (type_ == Fill::MATERIAL) {
     write_dataset(group, "fill_type", "material");
     std::vector<int32_t> mat_ids;
     for (auto i_mat : material_) {
@@ -581,7 +586,7 @@ CSGCell::to_hdf5(hid_t cell_group) const
       temps.push_back(sqrtkT_val * sqrtkT_val / K_BOLTZMANN);
     write_dataset(group, "temperature", temps);
 
-  } else if (type_ == FILL_UNIVERSE) {
+  } else if (type_ == Fill::UNIVERSE) {
     write_dataset(group, "fill_type", "universe");
     write_dataset(group, "fill", model::universes[fill_]->id_);
     if (translation_ != Position(0, 0, 0)) {
@@ -596,7 +601,7 @@ CSGCell::to_hdf5(hid_t cell_group) const
       }
     }
 
-  } else if (type_ == FILL_LATTICE) {
+  } else if (type_ == Fill::LATTICE) {
     write_dataset(group, "fill_type", "lattice");
     write_dataset(group, "lattice", model::lattices[fill_]->id_);
   }
@@ -781,13 +786,13 @@ CSGCell::contains_complex(Position r, Direction u, int32_t on_surface) const
 DAGCell::DAGCell() : Cell{} {};
 
 std::pair<double, int32_t>
-DAGCell::distance(Position r, Direction u, int32_t on_surface) const
+DAGCell::distance(Position r, Direction u, int32_t on_surface, Particle* p) const
 {
   // if we've changed direction or we're not on a surface,
   // reset the history and update last direction
-  if (u != simulation::last_dir || on_surface == 0) {
-    simulation::history.reset();
-    simulation::last_dir = u;
+  if (u != p->last_dir_ || on_surface == 0) {
+    p->history_.reset();
+    p->last_dir_ = u;
   }
 
   moab::ErrorCode rval;
@@ -796,7 +801,7 @@ DAGCell::distance(Position r, Direction u, int32_t on_surface) const
   double dist;
   double pnt[3] = {r.x, r.y, r.z};
   double dir[3] = {u.x, u.y, u.z};
-  rval = dagmc_ptr_->ray_fire(vol, pnt, dir, hit_surf, dist, &simulation::history);
+  rval = dagmc_ptr_->ray_fire(vol, pnt, dir, hit_surf, dist, &p->history_);
   MB_CHK_ERR_CONT(rval);
   int surf_idx;
   if (hit_surf != 0) {
@@ -1042,8 +1047,8 @@ openmc_cell_get_fill(int32_t index, int* type, int32_t** indices, int32_t* n)
 {
   if (index >= 0 && index < model::cells.size()) {
     Cell& c {*model::cells[index]};
-    *type = c.type_;
-    if (c.type_ == FILL_MATERIAL) {
+    *type = static_cast<int>(c.type_);
+    if (c.type_ == Fill::MATERIAL) {
       *indices = c.material_.data();
       *n = c.material_.size();
     } else {
@@ -1061,10 +1066,11 @@ extern "C" int
 openmc_cell_set_fill(int32_t index, int type, int32_t n,
                      const int32_t* indices)
 {
+  Fill filltype = static_cast<Fill>(type);
   if (index >= 0 && index < model::cells.size()) {
     Cell& c {*model::cells[index]};
-    if (type == FILL_MATERIAL) {
-      c.type_ = FILL_MATERIAL;
+    if (filltype == Fill::MATERIAL) {
+      c.type_ = Fill::MATERIAL;
       c.material_.clear();
       for (int i = 0; i < n; i++) {
         int i_mat = indices[i];
@@ -1078,10 +1084,10 @@ openmc_cell_set_fill(int32_t index, int type, int32_t n,
         }
       }
       c.material_.shrink_to_fit();
-    } else if (type == FILL_UNIVERSE) {
-      c.type_ = FILL_UNIVERSE;
+    } else if (filltype == Fill::UNIVERSE) {
+      c.type_ = Fill::UNIVERSE;
     } else {
-      c.type_ = FILL_LATTICE;
+      c.type_ = Fill::LATTICE;
     }
   } else {
     set_errmsg("Index in cells array is out of bounds.");
