@@ -1,6 +1,6 @@
 #include "openmc/tallies/derivative.h"
 
-#include "openmc/container_util.h"
+#include "openmc/container_util.h" // for contains
 #include "openmc/error.h"
 #include "openmc/material.h"
 #include "openmc/nuclide.h"
@@ -87,7 +87,7 @@ read_tally_derivatives(pugi::xml_node node)
     model::tally_derivs.emplace_back(deriv_node);
 
   // Fill the derivative map.
-  for (auto i = 0; i < model::tally_derivs.size(); ++i) {
+  for (int i = 0; i < model::tally_derivs.size(); ++i) {
     auto id = model::tally_derivs[i].id;
     auto search = model::tally_deriv_map.find(id);
     if (search == model::tally_deriv_map.end()) {
@@ -101,6 +101,23 @@ read_tally_derivatives(pugi::xml_node node)
   // Make sure derivatives were not requested for an MG run.
   if (!settings::run_CE && !model::tally_derivs.empty())
     fatal_error("Differential tallies not supported in multi-group mode");
+
+  // Link materials to their corresponding derivatives.
+  for (int i_deriv = 0; i_deriv < model::tally_derivs.size(); ++i_deriv) {
+    auto& deriv {model::tally_derivs[i_deriv]};
+    for (auto& mat_id : deriv.diff_materials) {
+      auto search = model::material_map.find(mat_id);
+      if (search != model::material_map.end()) {
+        auto mat_indx = search->second;
+        model::materials[mat_indx]->derivs_.push_back(i_deriv);
+      } else {
+        std::stringstream out;
+        out << "Could not find the mateiral \"" << mat_id
+            << "\" specified in derivative " << deriv.id;
+        fatal_error(out);
+      }
+    }
+  }
 }
 
 void
@@ -128,7 +145,7 @@ apply_derivative_to_score(const Particle* p, int i_tally, int i_nuclide,
     return;
   }
   const Material& material {*model::materials[p->material_]};
-  if (!contains(deriv.diff_materials, material.id_)) {
+  if (!contains(material.derivs_, tally.deriv_)) {
     score *= flux_deriv;
     return;
   }
@@ -570,10 +587,9 @@ score_track_derivative(Particle* p, double distance)
   if (p->material_ == MATERIAL_VOID) return;
   const Material& material {*model::materials[p->material_]};
 
-  for (auto idx = 0; idx < model::tally_derivs.size(); idx++) {
+  for (auto idx : material.derivs_) {
     const auto& deriv = model::tally_derivs[idx];
     auto& flux_deriv = p->flux_derivs_[idx];
-    if (!contains(deriv.diff_materials, material.id_)) continue;
 
     switch (deriv.variable) {
 
@@ -619,10 +635,9 @@ void score_collision_derivative(Particle* p)
 
   const Material& material {*model::materials[p->material_]};
 
-  for (auto idx = 0; idx < model::tally_derivs.size(); idx++) {
+  for (auto idx : material.derivs_) {
     const auto& deriv = model::tally_derivs[idx];
     auto& flux_deriv = p->flux_derivs_[idx];
-    if (!contains(deriv.diff_materials, material.id_)) continue;
 
     switch (deriv.variable) {
 
