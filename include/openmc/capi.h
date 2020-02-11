@@ -88,6 +88,7 @@ extern "C" {
   int openmc_reset();
   int openmc_run();
   void openmc_set_seed(int64_t new_seed);
+  void openmc_set_default_sig_handlers();
   int openmc_simulation_finalize();
   int openmc_simulation_init();
   int openmc_source_bank(void** ptr, int64_t* n);

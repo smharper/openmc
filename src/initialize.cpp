@@ -1,5 +1,6 @@
 #include "openmc/initialize.h"
 
+#include <csignal>
 #include <cstddef>
 #include <cstdlib> // for getenv
 #include <cstring>
@@ -80,6 +81,12 @@ int openmc_init(int argc, char* argv[], const void* intracomm)
   simulation::time_initialize.stop();
 
   return 0;
+}
+
+void openmc_set_default_sig_handlers()
+{
+  std::signal(SIGINT, SIG_DFL);
+  std::signal(SIGTERM, SIG_DFL);
 }
 
 namespace openmc {

@@ -172,7 +172,7 @@ def hard_reset():
     _dll.openmc_hard_reset()
 
 
-def init(args=None, intracomm=None):
+def init(args=None, intracomm=None, reset_sig_handlers=True):
     """Initialize OpenMC
 
     Parameters
@@ -181,8 +181,13 @@ def init(args=None, intracomm=None):
         Command-line arguments
     intracomm : mpi4py.MPI.Intracomm or None
         MPI intracommunicator
+    reset_sig_handlers : bool
+        Explicilty reset SIGINT and SIGTERM to the default handlers
 
     """
+    if reset_sig_handlers:
+        _dll.openmc_set_default_sig_handlers()
+
     if args is not None:
         args = ['openmc'] + list(args)
         argc = len(args)
