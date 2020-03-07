@@ -4,7 +4,8 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "pugixml.hpp"
+#include <fmt/core.h>
+#include <pugixml.hpp>
 
 #include "openmc/cell.h"
 #include "openmc/constants.h"
@@ -94,10 +95,8 @@ adjust_indices()
         c->type_ = Fill::LATTICE;
         c->fill_ = search_lat->second;
       } else {
-        std::stringstream err_msg;
-        err_msg << "Specified fill " << id << " on cell " << c->id_
-                << " is neither a universe nor a lattice.";
-        fatal_error(err_msg);
+        fatal_error(fmt::format("Specified fill {} on cell {} is neither a "
+          "universe nor a lattice.", id, c->id_));
       }
     } else {
       c->type_ = Fill::MATERIAL;
@@ -105,10 +104,9 @@ adjust_indices()
         if (mat_id != MATERIAL_VOID) {
           auto search = model::material_map.find(mat_id);
           if (search == model::material_map.end()) {
-            std::stringstream err_msg;
-            err_msg << "Could not find material " << mat_id
-                    << " specified on cell " << c->id_;
-            fatal_error(err_msg);
+            fatal_error(fmt::format(
+              "Could not find material {} specified on cell {}",
+              mat_id, c->id_));
           }
           // Change from ID to index
           mat_id = search->second;
@@ -123,10 +121,8 @@ adjust_indices()
     if (search != model::universe_map.end()) {
       c->universe_ = search->second;
     } else {
-      std::stringstream err_msg;
-      err_msg << "Could not find universe " << c->universe_
-              << " specified on cell " << c->id_;
-      fatal_error(err_msg);
+      fatal_error(fmt::format("Could not find universe {} specified on cell {}",
+        c->universe_, c->id_));
     }
   }
 
@@ -345,23 +341,21 @@ prepare_distribcell()
 
     if (c.material_.size() > 1) {
       if (c.material_.size() != c.n_instances_) {
-        std::stringstream err_msg;
-        err_msg <<  "Cell " << c.id_ <<  " was specified with "
-              << c.material_.size() << " materials but has " << c.n_instances_
-              << " distributed instances. The number of materials must equal "
-              "one or the number of instances.";
-        fatal_error(err_msg);
+        fatal_error(fmt::format(
+          "Cell {} was specified with {} materials but has {} distributed "
+          "instances. The number of materials must equal one or the number "
+          "of instances.", c.id_, c.material_.size(), c.n_instances_
+        ));
       }
     }
 
     if (c.sqrtkT_.size() > 1) {
       if (c.sqrtkT_.size() != c.n_instances_) {
-        std::stringstream err_msg;
-        err_msg <<  "Cell " << c.id_ <<  " was specified with "
-          << c.sqrtkT_.size() << " temperatures but has " << c.n_instances_
-          << " distributed instances. The number of temperatures must equal "
-          "one or the number of instances.";
-        fatal_error(err_msg);
+        fatal_error(fmt::format(
+          "Cell {} was specified with {} temperatures but has {} distributed "
+          "instances. The number of temperatures must equal one or the number "
+          "of instances.", c.id_, c.sqrtkT_.size(), c.n_instances_
+        ));
       }
     }
   }
@@ -391,8 +385,10 @@ prepare_distribcell()
   }
 
   // Fill the cell and lattice offset tables.
+  #pragma omp parallel for
   for (int map = 0; map < target_univ_ids.size(); map++) {
     auto target_univ_id = target_univ_ids[map];
+    std::unordered_map<int32_t, int32_t> univ_count_memo;
     for (const auto& univ : model::universes) {
       int32_t offset = 0;
       for (int32_t cell_indx : univ->cells_) {
@@ -401,11 +397,13 @@ prepare_distribcell()
         if (c.type_ == Fill::UNIVERSE) {
           c.offset_[map] = offset;
           int32_t search_univ = c.fill_;
-          offset += count_universe_instances(search_univ, target_univ_id);
+          offset += count_universe_instances(search_univ, target_univ_id,
+                                             univ_count_memo);
 
         } else if (c.type_ == Fill::LATTICE) {
           Lattice& lat = *model::lattices[c.fill_];
-          offset = lat.fill_offset_table(offset, target_univ_id, map);
+          offset = lat.fill_offset_table(offset, target_univ_id, map,
+                                         univ_count_memo);
         }
       }
     }
@@ -417,7 +415,6 @@ prepare_distribcell()
 void
 count_cell_instances(int32_t univ_indx)
 {
-
   const auto univ_counts = model::universe_cell_counts.find(univ_indx);
   if (univ_counts != model::universe_cell_counts.end()) {
     for (const auto& it : univ_counts->second) {
@@ -448,11 +445,18 @@ count_cell_instances(int32_t univ_indx)
 //==============================================================================
 
 int
-count_universe_instances(int32_t search_univ, int32_t target_univ_id)
+count_universe_instances(int32_t search_univ, int32_t target_univ_id,
+  std::unordered_map<int32_t, int32_t>& univ_count_memo)
 {
-  //  If this is the target, it can't contain itself.
+  // If this is the target, it can't contain itself.
   if (model::universes[search_univ]->id_ == target_univ_id) {
     return 1;
+  }
+
+  // If we have already counted the number of instances, reuse that value.
+  auto search = univ_count_memo.find(search_univ);
+  if (search != univ_count_memo.end()) {
+    return search->second;
   }
 
   int count {0};
@@ -461,16 +465,21 @@ count_universe_instances(int32_t search_univ, int32_t target_univ_id)
 
     if (c.type_ == Fill::UNIVERSE) {
       int32_t next_univ = c.fill_;
-      count += count_universe_instances(next_univ, target_univ_id);
+      count += count_universe_instances(next_univ, target_univ_id,
+                                        univ_count_memo);
 
     } else if (c.type_ == Fill::LATTICE) {
       Lattice& lat = *model::lattices[c.fill_];
       for (auto it = lat.begin(); it != lat.end(); ++it) {
         int32_t next_univ = *it;
-        count += count_universe_instances(next_univ, target_univ_id);
+        count += count_universe_instances(next_univ, target_univ_id,
+                                          univ_count_memo);
       }
     }
   }
+
+  // Remember the number of instances in this universe.
+  univ_count_memo[search_univ] = count;
 
   return count;
 }

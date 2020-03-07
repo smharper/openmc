@@ -8,7 +8,7 @@
 #include "openmc/tallies/tally.h"
 #include "openmc/xml_interface.h"
 
-#include <sstream>
+#include <fmt/core.h>
 
 template class std::vector<openmc::TallyDerivative>;
 
@@ -56,20 +56,16 @@ TallyDerivative::TallyDerivative(pugi::xml_node node)
       }
     }
     if (!found) {
-      std::stringstream out;
-      out << "Could not find the nuclide \"" << nuclide_name
-          << "\" specified in derivative " << id << " in any material.";
-      fatal_error(out);
+      fatal_error(fmt::format("Could not find the nuclide \"{}\" specified in "
+        "derivative {} in any material.", nuclide_name, id));
     }
 
   } else if (variable_str == "temperature") {
     variable = DerivativeVariable::TEMPERATURE;
 
   } else {
-    std::stringstream out;
-    out << "Unrecognized variable \"" << variable_str
-        << "\" on derivative " << id;
-    fatal_error(out);
+    fatal_error(fmt::format("Unrecognized variable \"{}\" on derivative {}",
+      variable_str, id));
   }
 
   diff_materials = get_node_array<int32_t>(node, "materials");
@@ -656,11 +652,9 @@ void score_collision_derivative(Particle* p)
         if (material.nuclide_[i] == deriv.diff_nuclide) break;
       // Make sure we found the nuclide.
       if (material.nuclide_[i] != deriv.diff_nuclide) {
-        std::stringstream err_msg;
-        err_msg << "Could not find nuclide "
-          << data::nuclides[deriv.diff_nuclide]->name_ << " in material "
-          << material.id_ << " for tally derivative " << deriv.id;
-        fatal_error(err_msg);
+        fatal_error(fmt::format(
+          "Could not find nuclide {} in material {} for tally derivative {}",
+          data::nuclides[deriv.diff_nuclide]->name_, material.id_, deriv.id));
       }
       // phi is proportional to Sigma_s
       // (1 / phi) * (d_phi / d_N) = (d_Sigma_s / d_N) / Sigma_s
