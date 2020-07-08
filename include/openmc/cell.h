@@ -175,9 +175,6 @@ public:
   std::vector<std::int32_t> rpn_;
   bool simple_;  //!< Does the region contain only intersections?
 
-  //! \brief Neighboring cells in the same universe.
-  NeighborList neighbors_;
-
   Position translation_ {0, 0, 0}; //!< Translation vector for filled universe
 
   //! \brief Rotational tranfsormation of the filled universe.
