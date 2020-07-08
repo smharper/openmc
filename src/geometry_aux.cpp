@@ -256,7 +256,7 @@ void finalize_geometry(std::vector<std::vector<double>>& nuc_temps,
   // Perform some final operations to set up the geometry
   adjust_indices();
   count_cell_instances(model::root_universe);
-  partition_universes();
+  //partition_universes();
 
   // Assign temperatures to cells that don't have temperatures already assigned
   assign_temperatures();
