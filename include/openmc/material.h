@@ -144,6 +144,7 @@ public:
   bool fissionable_ {false}; //!< Does this material contain fissionable nuclides
   bool depletable_ {false}; //!< Is the material depletable?
   std::vector<bool> p0_; //!< Indicate which nuclides are to be treated with iso-in-lab scattering
+  std::vector<int> derivs_; //!< TallyDerivatives that reference this material
 
   // To improve performance of tallying, we store an array (direct address
   // table) that indicates for each nuclide in data::nuclides the index of the

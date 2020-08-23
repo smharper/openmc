@@ -449,12 +449,12 @@ class StatePoint:
                     deriv = openmc.TallyDerivative(derivative_id=d_id)
                     deriv.variable = group['independent variable'][()].decode()
                     if deriv.variable == 'density':
-                        deriv.material = group['material'][()]
+                        deriv.materials = group['materials'][()]
                     elif deriv.variable == 'nuclide_density':
-                        deriv.material = group['material'][()]
+                        deriv.materials = group['materials'][()]
                         deriv.nuclide = group['nuclide'][()].decode()
                     elif deriv.variable == 'temperature':
-                        deriv.material = group['material'][()]
+                        deriv.materials = group['materials'][()]
                     self._derivs[d_id] = deriv
 
             self._derivs_read = True

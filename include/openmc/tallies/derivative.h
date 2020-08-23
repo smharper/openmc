@@ -26,6 +26,7 @@ struct TallyDerivative {
   DerivativeVariable variable;  //!< Independent variable (like temperature)
   int id;  //!< User-defined identifier
   int diff_material;  //!< Material this derivative is applied to
+  std::vector<int32_t> diff_materials;  //!< Materials this deriv is applied to
   int diff_nuclide;  //!< Nuclide this material is applied to
 
   TallyDerivative() {}
@@ -61,13 +62,9 @@ void score_collision_derivative(Particle& p);
 //! \param distance The distance in [cm] traveled by the particle
 void score_track_derivative(Particle& p, double distance);
 
-} // namespace openmc
-
 //==============================================================================
 // Global variables
 //==============================================================================
-
-namespace openmc {
 
 namespace model {
 extern std::unordered_map<int, int> tally_deriv_map;

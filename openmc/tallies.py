@@ -1326,8 +1326,8 @@ class Tally(IDManagerMixin):
         # Include columns for derivatives if user requested it
         if derivative and (self.derivative is not None):
             df['d_variable'] = self.derivative.variable
-            if self.derivative.material is not None:
-                df['d_material'] = self.derivative.material
+            if self.derivative.materials is not None:
+                df['d_materials'] = [self.derivative.materials]*len(df)
             if self.derivative.nuclide is not None:
                 df['d_nuclide'] = self.derivative.nuclide
 

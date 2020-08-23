@@ -10,14 +10,14 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
 
     Parameters
     ----------
-    derivative_id : int, optional
+    derivative_id : int
         Unique identifier for the tally derivative. If none is specified, an
         identifier will automatically be assigned
-    variable : str, optional
+    variable : str
         Accepted values are 'density', 'nuclide_density', and 'temperature'
-    material : int, optional
-        The perturbed material ID
-    nuclide : str, optional
+    materials : Iterable of int
+        The perturbed material IDs
+    nuclide : str
         The perturbed nuclide. Only needed for 'nuclide_density' derivatives.
         Ex: 'Xe135'
 
@@ -27,8 +27,8 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         Unique identifier for the tally derivative
     variable : str
         Accepted values are 'density', 'nuclide_density', and 'temperature'
-    material : int
-        The perturubed material ID
+    materials : int
+        The perturubed material IDs
     nuclide : str
         The perturbed nuclide. Only needed for 'nuclide_density' derivatives.
         Ex: 'Xe135'
@@ -38,19 +38,19 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
     next_id = 1
     used_ids = set()
 
-    def __init__(self, derivative_id=None, variable=None, material=None,
+    def __init__(self, derivative_id=None, variable=None, materials=None,
                  nuclide=None):
         # Initialize Tally class attributes
         self.id = derivative_id
         self.variable = variable
-        self.material = material
+        self.materials = materials
         self.nuclide = nuclide
 
     def __repr__(self):
         string = 'Tally Derivative\n'
         string += '{: <16}=\t{}\n'.format('\tID', self.id)
         string += '{: <16}=\t{}\n'.format('\tVariable', self.variable)
-        string += '{: <16}=\t{}\n'.format('\tMaterial', self.material)
+        string += '{: <16}=\t{}\n'.format('\tMaterials', self.materials)
         if self.variable == 'nuclide_density':
             string += '{: <16}=\t{}\n'.format('\tNuclide', self.nuclide)
 
@@ -61,8 +61,8 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         return self._variable
 
     @property
-    def material(self):
-        return self._material
+    def materials(self):
+        return self._materials
 
     @property
     def nuclide(self):
@@ -76,11 +76,11 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
                            ('density', 'nuclide_density', 'temperature'))
         self._variable = var
 
-    @material.setter
-    def material(self, mat):
-        if mat is not None:
-            cv.check_type('derivative material', mat, Integral)
-        self._material = mat
+    @materials.setter
+    def materials(self, mats):
+        if mats is not None:
+            cv.check_iterable_type('derivative materials', mats, Integral)
+        self._materials = mats
 
     @nuclide.setter
     def nuclide(self, nuc):
@@ -101,7 +101,7 @@ class TallyDerivative(EqualityMixin, IDManagerMixin):
         element = ET.Element("derivative")
         element.set("id", str(self.id))
         element.set("variable", self.variable)
-        element.set("material", str(self.material))
+        element.set("materials", ' '.join(str(m) for m in self.materials))
         if self.variable == 'nuclide_density':
             element.set("nuclide", self.nuclide)
         return element

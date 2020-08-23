@@ -431,9 +431,9 @@
     <scores>nu-fission scatter</scores>
     <derivative>5</derivative>
   </tally>
-  <derivative id="1" material="3" variable="density" />
-  <derivative id="2" material="1" variable="density" />
-  <derivative id="3" material="1" nuclide="O16" variable="nuclide_density" />
-  <derivative id="4" material="1" nuclide="U235" variable="nuclide_density" />
-  <derivative id="5" material="1" variable="temperature" />
+  <derivative id="1" materials="3" variable="density" />
+  <derivative id="2" materials="1" variable="density" />
+  <derivative id="3" materials="1" nuclide="O16" variable="nuclide_density" />
+  <derivative id="4" materials="1" nuclide="U235" variable="nuclide_density" />
+  <derivative id="5" materials="1 3" variable="temperature" />
 </tallies>

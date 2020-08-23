@@ -27,29 +27,29 @@ class DiffTallyTestHarness(PyAPITestHarness):
         # for both fissile and non-fissile materials.
         d1 = openmc.TallyDerivative(derivative_id=1)
         d1.variable = 'density'
-        d1.material = 3
+        d1.materials = [3]
         d2 = openmc.TallyDerivative(derivative_id=2)
         d2.variable = 'density'
-        d2.material = 1
+        d2.materials = [1]
 
         # O-16 is a good nuclide to test against because it is present in both
         # water and fuel.  Some routines need to recognize that they have the
         # perturbed nuclide but not the perturbed material.
         d3 = openmc.TallyDerivative(derivative_id=3)
         d3.variable = 'nuclide_density'
-        d3.material = 1
+        d3.materials = [1]
         d3.nuclide = 'O16'
 
         # A fissile nuclide, just for good measure.
         d4 = openmc.TallyDerivative(derivative_id=4)
         d4.variable = 'nuclide_density'
-        d4.material = 1
+        d4.materials = [1]
         d4.nuclide = 'U235'
 
-        # Temperature derivatives.
+        # Temperature derivatives over multiple materials.
         d5 = openmc.TallyDerivative(derivative_id=5)
         d5.variable = 'temperature'
-        d5.material = 1
+        d5.materials = [1, 3]
 
         derivs = [d1, d2, d3, d4, d5]
 
@@ -108,7 +108,7 @@ class DiffTallyTestHarness(PyAPITestHarness):
             df = df.append(t.get_pandas_dataframe(), ignore_index=True)
 
         # Extract the relevant data as a CSV string.
-        cols = ('d_material', 'd_nuclide', 'd_variable', 'score', 'mean',
+        cols = ('d_materials', 'd_nuclide', 'd_variable', 'score', 'mean',
                 'std. dev.')
         return df.to_csv(None, columns=cols, index=False, float_format='%.7e')
 
