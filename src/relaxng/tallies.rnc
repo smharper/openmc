@@ -30,7 +30,8 @@ element tallies {
 
   element derivative {
     (element id { xsd:int } | attribute id { xsd:int }) &
-    (element material { xsd:int } | attribute material { xsd:int }) &
+    (element materials { list { xsd:int+ } }
+      | attribute materials { list { xsd:int+ } }) &
     ( (element variable { ( "density") }
         | attribute variable { ( "density" ) } ) |
       (

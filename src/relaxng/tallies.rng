@@ -163,11 +163,19 @@
             </attribute>
           </choice>
           <choice>
-            <element name="material">
-              <data type="int"/>
+            <element name="materials">
+              <list>
+                <oneOrMore>
+                  <data type="int"/>
+                </oneOrMore>
+              </list>
             </element>
-            <attribute name="material">
-              <data type="int"/>
+            <attribute name="materials">
+              <list>
+                <oneOrMore>
+                  <data type="int"/>
+                </oneOrMore>
+              </list>
             </attribute>
           </choice>
           <choice>
