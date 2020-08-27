@@ -106,7 +106,7 @@ The current version of the statepoint file format is 17.0.
 
 :Datasets: - **independent variable** (*char[]*) -- Independent variable of
              tally derivative.
-           - **material** (*int*) -- ID of the perturbed material.
+           - **materials** (*int[]*) -- IDs of the perturbed materials.
            - **nuclide** (*char[]*) -- Alias of the perturbed nuclide.
            - **estimator** (*char[]*) -- Type of tally estimator, either
              'analog', 'tracklength', or 'collision'.

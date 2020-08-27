@@ -374,8 +374,13 @@ the following attributes/sub-elements:
     expansion, S(a, b) scattering, resonance scattering, or unresolved Doppler
     broadening.
 
-  :material:
-    The perturbed material. (Necessary for all derivative types)
+  :materials:
+    The perturbed materials. If multiple materials are listed, derivatives are
+    computed assuming all of the materials are part of one perturbed region.
+    Multiple-material derivatives are only expected to be meningful when
+    combining materials that will have identical or similar
+    temperature/density/composition changes e.g. two small adjacent reigons of
+    one fuel rod.
 
   :nuclide:
     The perturbed nuclide. (Necessary only for "nuclide_density")
